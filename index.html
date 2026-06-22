@@ -335,7 +335,7 @@ a { color:inherit; text-decoration:none; }
 #chat-area {
   flex:1; overflow-y:auto; position:relative; z-index:1;
   padding-top: calc(56px + var(--statusbar-height) + 16px);
-  padding-bottom:80px;
+  padding-bottom:100px;
   padding-left:16px; padding-right:16px;
   scroll-behavior:smooth;
 }
@@ -344,7 +344,7 @@ a { color:inherit; text-decoration:none; }
 /* 消息块 */
 .msg-block {
   display:flex; align-items:flex-start; gap:10px;
-  margin-bottom:20px;
+  margin-bottom:24px;
   animation: msgIn 300ms ease-out both;
   min-width:0;
   overflow:visible;
@@ -471,6 +471,28 @@ a { color:inherit; text-decoration:none; }
 .interrupted-mark {
   font-size:12px; color:var(--text-muted); margin-top:4px; font-style:italic;
 }
+/* 消息操作栏（继写/重回/帮回） */
+.msg-action-bar {
+  display:flex; align-items:center; gap:2px;
+  margin-top:6px;
+  padding-top:4px;
+}
+.msg-act-btn {
+  width:30px; height:30px;
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  transition:background 150ms;
+  cursor:pointer;
+  flex-shrink:0;
+}
+.msg-act-btn:hover { background:var(--bg-hover); }
+.msg-act-btn svg {
+  width:15px; height:15px;
+  stroke:var(--text-muted);
+  stroke-width:1.5;
+  fill:none;
+}
+.msg-act-btn:hover svg { stroke:var(--text-secondary); }
 /* 版本切换栏 */
 .version-bar {
   display:flex; align-items:center; gap:6px;
@@ -3314,6 +3336,13 @@ function renderUserBubbleContent(msg) {
 }
 
 function renderMessageElement(msg, prevMsg) {
+  // 续写占位消息不渲染
+  if (msg._isContinuePlaceholder) {
+    var emptyDiv = document.createElement('div');
+    emptyDiv.style.display = 'none';
+    emptyDiv.dataset.msgId = msg.id;
+    return emptyDiv;
+  }
   const sameSender = prevMsg && prevMsg.role === msg.role;
   const block = document.createElement('div');
   block.className = 'msg-block ' + msg.role + (sameSender ? ' same-sender' : '');
@@ -3349,6 +3378,44 @@ function renderMessageElement(msg, prevMsg) {
       mark.className = 'interrupted-mark';
       mark.textContent = '（已中断）';
       content.appendChild(mark);
+    }
+    // 操作栏：继写、重回、帮回（仅最新消息显示）
+    var isLastCharMsg = false;
+    for (var _lci = state.messages.length - 1; _lci >= 0; _lci--) {
+      if (state.messages[_lci].role === 'assistant' && !state.messages[_lci].isWelcome) {
+        isLastCharMsg = (state.messages[_lci].id === msg.id);
+        break;
+      }
+    }
+    var isLastMsgOverall = (state.messages.length > 0 && state.messages[state.messages.length - 1].id === msg.id);
+    if (!msg.isWelcome && isLastCharMsg && isLastMsgOverall) {
+      var actionBar = document.createElement('div');
+      actionBar.className = 'msg-action-bar';
+      // 继写
+      var btnContinue = document.createElement('button');
+      btnContinue.className = 'msg-act-btn';
+      btnContinue.title = '继写';
+      btnContinue.dataset.actType = 'continue';
+      btnContinue.dataset.actMsgId = msg.id;
+      btnContinue.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>';
+      actionBar.appendChild(btnContinue);
+      // 重回
+      var btnRegen = document.createElement('button');
+      btnRegen.className = 'msg-act-btn';
+      btnRegen.title = '重回';
+      btnRegen.dataset.actType = 'regen';
+      btnRegen.dataset.actMsgId = msg.id;
+      btnRegen.innerHTML = '<svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>';
+      actionBar.appendChild(btnRegen);
+      // 帮回
+      var btnHelp = document.createElement('button');
+      btnHelp.className = 'msg-act-btn';
+      btnHelp.title = '帮回';
+      btnHelp.dataset.actType = 'helpReply';
+      btnHelp.dataset.actMsgId = msg.id;
+      btnHelp.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M9 10h.01"/><path d="M12 10h.01"/><path d="M15 10h.01"/></svg>';
+      actionBar.appendChild(btnHelp);
+      content.appendChild(actionBar);
     }
     if (msg.versions && msg.versions.length > 1) {
       var verBar = document.createElement('div');
@@ -3386,7 +3453,40 @@ function renderMessageElement(msg, prevMsg) {
       block.innerHTML = getUserAvatarHTML() + '<div class="user-content"><div class="user-bubble">' + renderUserBubbleContent(msg) + '</div></div>';
     }
   }
-
+// User 操作栏：继写、帮回（仅最新消息显示）
+  var isLastUserMsg = false;
+  for (var _lui = state.messages.length - 1; _lui >= 0; _lui--) {
+    if (state.messages[_lui].role === 'user' && !state.messages[_lui].isWelcome) {
+      isLastUserMsg = (state.messages[_lui].id === msg.id);
+      break;
+    }
+  }
+  var isLastMsgOverallU = (state.messages.length > 0 && state.messages[state.messages.length - 1].id === msg.id);
+  if (msg.role === 'user' && !msg.isWelcome && isLastUserMsg && isLastMsgOverallU) {
+    var userContent = block.querySelector('.user-content');
+    if (userContent) {
+      var uActionBar = document.createElement('div');
+      uActionBar.className = 'msg-action-bar';
+      uActionBar.style.justifyContent = 'flex-end';
+      // 继写
+      var uBtnContinue = document.createElement('button');
+      uBtnContinue.className = 'msg-act-btn';
+      uBtnContinue.title = '继写';
+      uBtnContinue.dataset.actType = 'continue';
+      uBtnContinue.dataset.actMsgId = msg.id;
+      uBtnContinue.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>';
+      uActionBar.appendChild(uBtnContinue);
+      // 帮回
+      var uBtnHelp = document.createElement('button');
+      uBtnHelp.className = 'msg-act-btn';
+      uBtnHelp.title = '帮回';
+      uBtnHelp.dataset.actType = 'helpReply';
+      uBtnHelp.dataset.actMsgId = msg.id;
+      uBtnHelp.innerHTML = '<svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M9 10h.01"/><path d="M12 10h.01"/><path d="M15 10h.01"/></svg>';
+      uActionBar.appendChild(uBtnHelp);
+      userContent.appendChild(uActionBar);
+    }
+  }
   if (msg.role === 'user' && state.apiSettings.enableRealTime && msg.timestamp) {
     const userContent = block.querySelector('.user-content');
     if (userContent) {
@@ -3447,6 +3547,8 @@ function renderAllMessages() {
 
 function appendMessageElement(msg) {
   const inner = document.getElementById('chat-inner');
+  // 移除所有旧的操作栏，因为新消息加入后旧的不该再显示
+  inner.querySelectorAll('.msg-action-bar').forEach(function(bar) { bar.remove(); });
   const children = inner.querySelectorAll('.msg-block');
   const lastChild = children.length > 0 ? children[children.length - 1] : null;
   let prevMsg = null;
@@ -4229,6 +4331,17 @@ function buildMessages() {
       apiMessages.push({ role: 'user', content: combined });
     }
   }
+  // 续写模式：替换占位消息内容为续写指令
+  if (state._continueWritingMode) {
+    // 移除最后一条空的占位消息
+    if (apiMessages.length > 0) {
+      var lastApiMsg = apiMessages[apiMessages.length - 1];
+      if (lastApiMsg.role === 'user' && (!lastApiMsg.content || lastApiMsg.content.trim() === '')) {
+        apiMessages.pop();
+      }
+    }
+    apiMessages.push({ role: 'user', content: '[系统指令] 请接着你上一条回复的内容继续往下写，保持叙事节奏和语气的连贯性。不要重复已经写过的内容，从上次结束的地方自然衔接。保持相同的格式要求（状态栏 + 正文）。' });
+  }
   // 注入共读书上下文
   var readerContent = getCurrentPageContent();
   if (readerContent) {
@@ -4262,12 +4375,22 @@ async function receiveReply() {
 
   // 清除 pending 状态
   for (const pm of state.pendingMessages) {
-    pm.pending = false;
-    try {
-      await db.updateMessage(pm.id, { pending: false });
-    } catch (_) { /* 忽略 */ }
+    if (pm._isContinuePlaceholder) {
+      // 续写占位消息：从数据库和 state 中彻底删除
+      try { 
+        var _delTx = db._tx('messages', 'readwrite');
+        _delTx.objectStore('messages').delete(pm.id);
+        await db._txComplete(_delTx);
+      } catch (_) {}
+      state.messages = state.messages.filter(function(m) { return m.id !== pm.id; });
+    } else {
+      pm.pending = false;
+      try {
+        await db.updateMessage(pm.id, { pending: false });
+      } catch (_) { /* 忽略 */ }
+    }
   }
-  const pendingCopy = [...state.pendingMessages];
+  const pendingCopy = state.pendingMessages.filter(function(m) { return !m._isContinuePlaceholder; });
   state.pendingMessages = [];
 
   // 显示等待动画
@@ -4625,13 +4748,18 @@ async function receiveReply() {
       }
       showToast('已停止生成', 'warning');
     } else {
-      // 错误处理 - 将 pending 消息恢复
+      // 错误处理 - 将 pending 消息恢复（跳过续写占位消息）
       for (const pm of pendingCopy) {
+        if (pm._isContinuePlaceholder) continue;
         pm.pending = true;
         state.pendingMessages.push(pm);
         try {
           await db.updateMessage(pm.id, { pending: true });
         } catch (_) { /* 忽略 */ }
+      }
+      // 续写模式下出错，清理占位消息
+      if (state._continueWritingMode) {
+        state._continueWritingMode = false;
       }
       // 移除回复消息
       const idx = state.messages.indexOf(replyMsg);
@@ -4666,6 +4794,7 @@ async function receiveReply() {
   } finally {
     state.isGenerating = false;
     state.abortController = null;
+    state._continueWritingMode = false;
     updateSendButton();
   }
 }
@@ -4959,7 +5088,23 @@ function initMsgLongPress() {
   chatInner.addEventListener('pointercancel', () => {
     if (_longPressTimer) { clearTimeout(_longPressTimer); _longPressTimer = null; }
   });
-
+  // 操作栏按钮点击
+  chatInner.addEventListener('click', function(e) {
+    var actBtn = e.target.closest('[data-act-type]');
+    if (!actBtn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    var actType = actBtn.dataset.actType;
+    var actMsgId = actBtn.dataset.actMsgId;
+    if (!actType || !actMsgId) return;
+    if (actType === 'continue') {
+      continueWriting(actMsgId);
+    } else if (actType === 'regen') {
+      regenFromBar(actMsgId);
+    } else if (actType === 'helpReply') {
+      helpReply(actMsgId);
+    }
+  });
   // 版本切换点击
   chatInner.addEventListener('click', async (e) => {
     var verBtn = e.target.closest('[data-ver-msg]');
@@ -4990,21 +5135,7 @@ function initMsgLongPress() {
   chatInner.addEventListener('click', (e) => {
     if (_longPressTriggered) { _longPressTriggered = false; e.preventDefault(); return; }
     if (!state.multiSelectMode) {
-      var bubble = e.target.closest('.char-bubble, .user-bubble, .char-action');
-      if (bubble) {
-        var textToCopy = bubble.textContent || '';
-        if (textToCopy.trim()) {
-          if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(textToCopy.trim()).then(function() {
-              showToast('已复制', 'success', 1500);
-            }).catch(function() {
-              fallbackCopy(textToCopy.trim());
-            });
-          } else {
-            fallbackCopy(textToCopy.trim());
-          }
-        }
-      }
+            // 点击复制已移除
       return;
     }
     const msgBlock = e.target.closest('.msg-block');
@@ -5048,9 +5179,10 @@ function showMsgContextMenu(msgBlock, x, y) {
   html += '<div class="msg-menu-cell" data-action="copy"><svg viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span>复制</span></div>';
   html += '<div class="msg-menu-cell" data-action="edit"><svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg><span>编辑</span></div>';
   if (isChar) {
-    html += '<div class="msg-menu-cell" data-action="newver"><svg viewBox="0 0 24 24"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg><span>重回</span></div>';
+    html += '<div class="msg-menu-cell danger" data-action="rollback"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H12"/></svg><span>回溯</span></div>';
   } else {
     html += '<div class="msg-menu-cell" data-action="multiselect"><svg viewBox="0 0 24 24"><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>多选</span></div>';
+    html += '<div class="msg-menu-cell danger" data-action="rollback"><svg viewBox="0 0 24 24"><path d="M9 14L4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H12"/></svg><span>回溯</span></div>';
   }
   if (isChar) {
     html += '<div class="msg-menu-cell" data-action="favorite"><svg viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg><span>收藏</span></div>';
@@ -5217,13 +5349,218 @@ async function handleMsgMenuAction(action, msgId, msg) {
       db.updateMessage(newMsg.id, { versions: newMsg.versions, currentVersion: newMsg.currentVersion }).catch(function() {});
       renderAllMessages();
     });
+  } else if (action === 'rollback') {
+    await rollbackFromMessage(msgId);
+  } else if (action === 'newver_bar') {
+    // 与原版 newver 逻辑相同
+    var msgIdx = state.messages.indexOf(msg);
+    if (msgIdx === -1) return;
+    var confirmed2 = await showConfirm('将保留当前回复并生成新版本，可左右滑动切换版本。确认？');
+    if (!confirmed2) return;
+    if (!msg.versions) {
+      msg.versions = [{ rawText: msg.rawText, displayParts: msg.displayParts, status: msg.status, timestamp: msg.timestamp }];
+      msg.currentVersion = 0;
+    }
+    var prevUserIdx = -1;
+    for (var ui = msgIdx - 1; ui >= 0; ui--) {
+      if (state.messages[ui].role === 'user') { prevUserIdx = ui; break; }
+    }
+    if (prevUserIdx === -1) {
+      showToast('找不到对应的用户消息', 'warning');
+      return;
+    }
+    var prevUser = state.messages[prevUserIdx];
+    prevUser.pending = true;
+    state.pendingMessages = [prevUser];
+    try { await db.updateMessage(prevUser.id, { pending: true }); } catch (_) {}
+    var afterIdx = msgIdx + 1;
+    var removedAfter = state.messages.splice(afterIdx);
+    for (var ri = 0; ri < removedAfter.length; ri++) {
+      try {
+        var rtx = db._tx('messages', 'readwrite');
+        rtx.objectStore('messages').delete(removedAfter[ri].id);
+        await db._txComplete(rtx);
+      } catch (_) {}
+    }
+    var removedMsg = state.messages.splice(msgIdx, 1)[0];
+    try {
+      var dtx = db._tx('messages', 'readwrite');
+      dtx.objectStore('messages').delete(removedMsg.id);
+      await db._txComplete(dtx);
+    } catch (_) {}
+    renderAllMessages();
+    updateSendButton();
+    state._regenVersionData = { versions: removedMsg.versions, originalMsgId: msgId, fallbackMsg: removedMsg };
+    receiveReply().then(function() {
+      var versionData = state._regenVersionData;
+      delete state._regenVersionData;
+      if (!versionData) return;
+      var newMsg = state.messages[state.messages.length - 1];
+      if (!newMsg || newMsg.role !== 'assistant') return;
+      newMsg.versions = versionData.versions;
+      newMsg.versions.push({ rawText: newMsg.rawText, displayParts: newMsg.displayParts, status: newMsg.status, timestamp: newMsg.timestamp });
+      newMsg.currentVersion = newMsg.versions.length - 1;
+      db.updateMessage(newMsg.id, { versions: newMsg.versions, currentVersion: newMsg.currentVersion }).catch(function() {});
+      renderAllMessages();
+    });
   } else if (action === 'favorite') {
     await addToFavorites(msg);
   } else if (action === 'multiselect') {
     enterMultiSelectMode(msgId);
   }
 }
+// ── 回溯：删除当前消息及之后所有消息 ──
+async function rollbackFromMessage(msgId) {
+  var msgIdx = state.messages.findIndex(function(m) { return m.id === msgId; });
+  if (msgIdx === -1) { showToast('消息不存在', 'warning'); return; }
+  var countToDelete = state.messages.length - msgIdx;
+  var confirmed = await showConfirm('回溯将删除此消息及之后的全部 ' + countToDelete + ' 条消息，不可撤销。确认？', true);
+  if (!confirmed) return;
+  var toDelete = state.messages.slice(msgIdx);
+  for (var i = 0; i < toDelete.length; i++) {
+    try {
+      var tx = db._tx('messages', 'readwrite');
+      tx.objectStore('messages').delete(toDelete[i].id);
+      await db._txComplete(tx);
+    } catch (_) {}
+  }
+  state.messages = state.messages.slice(0, msgIdx);
+  state.pendingMessages = state.pendingMessages.filter(function(m) {
+    return state.messages.some(function(sm) { return sm.id === m.id; });
+  });
+  // 恢复最后状态
+  state.lastStatus = null;
+  for (var j = state.messages.length - 1; j >= 0; j--) {
+    if (state.messages[j].status) {
+      updateStatusBar(state.messages[j].status);
+      break;
+    }
+  }
+  if (!state.lastStatus) {
+    document.getElementById('status-toggle-bar').classList.remove('has-status');
+    document.getElementById('status-drawer').classList.remove('open');
+    state.statusDrawerOpen = false;
+    document.documentElement.style.setProperty('--statusbar-height', '0px');
+  }
+  renderAllMessages();
+  updateSendButton();
+  showToast('已回溯 ' + countToDelete + ' 条消息', 'success');
+}
 
+// ── 继写：复用 receiveReply，通过标记注入续写指令 ──
+async function continueWriting(msgId) {
+  if (state.isGenerating) { showToast('正在生成中', 'warning'); return; }
+  if (!state.apiSettings.apiKey) { showToast('请先在设置中填写 API 密钥', 'warning'); return; }
+
+  // 找到最后一条非 pending 的 assistant 或 user 消息作为上下文锚点
+  var msg = state.messages.find(function(m) { return m.id === msgId; });
+  if (!msg) return;
+
+  // 设置续写标记
+  state._continueWritingMode = true;
+
+  // 需要确保 pendingMessages 中有内容才能触发 receiveReply
+  // 创建一个不可见的占位 pending 消息
+  var placeholderMsg = {
+    id: genId('msg'),
+    role: 'user',
+    rawText: '',
+    displayParts: [],
+    userText: '',
+    emojiRefs: [],
+    imageRefs: [],
+    status: null,
+    timestamp: Date.now(),
+    isWelcome: false,
+    isEmojiOnly: false,
+    isImageOnly: false,
+    pending: true,
+    _isContinuePlaceholder: true
+  };
+  state.messages.push(placeholderMsg);
+  state.pendingMessages = [placeholderMsg];
+  try { await db.addMessage(placeholderMsg); } catch (_) {}
+  // 不渲染到界面上
+
+  // 调用 receiveReply，走完整流程（状态、记忆、流式等全部生效）
+  await receiveReply();
+}
+
+// ── 帮回：AI 帮写 user 回复到输入框 ──
+async function helpReply(msgId) {
+  if (state.isGenerating) { showToast('正在生成中', 'warning'); return; }
+  if (!state.apiSettings.apiKey) { showToast('请先在设置中填写 API 密钥', 'warning'); return; }
+  var btn = document.querySelector('[data-act-type="helpReply"][data-act-msg-id="' + msgId + '"]');
+  var originalSvg = '';
+  if (btn) {
+    originalSvg = btn.innerHTML;
+    btn.innerHTML = '<svg viewBox="0 0 24 24" style="animation:spin 0.8s linear infinite"><circle cx="12" cy="12" r="10" stroke-dasharray="30 70"/></svg>';
+    btn.style.pointerEvents = 'none';
+  }
+  try {
+    var charName = getCharName();
+    var userName = getUserName();
+    var system = '你的唯一任务：根据对话上下文，以 ' + userName + ' 的身份写一条回复。\n\n';
+    if (state.userMeta.description) {
+      system += '关于 ' + userName + '：\n' + state.userMeta.description + '\n\n';
+    }
+    system += '铁律（违反任何一条即为失败）：\n';
+    system += '1. 直接输出回复正文，第一个字就是回复内容的开头\n';
+    system += '2. 禁止输出任何解释、注释、前缀、后缀、括号说明、引导语\n';
+    system += '3. 禁止输出"以下是回复"、"好的"、"这是建议"等任何元叙述\n';
+    system += '4. 禁止输出状态栏 [[STATUS]]...[[/STATUS]]\n';
+    system += '5. 使用「」包裹说出口的话，其余为动作描写\n';
+    system += '6. 控制在 30～150 字\n';
+    system += '7. 语气行为符合 ' + userName + ' 的人设，自然承接上文\n';
+    var nonWelcome = state.messages.filter(function(m) { return !m.isWelcome && !m.pending; });
+    var recent = nonWelcome.slice(-10);
+    var contextMsgs = [];
+    for (var i = 0; i < recent.length; i++) {
+      var m = recent[i];
+      if (m.role === 'user') {
+        contextMsgs.push({ role: 'user', content: m.userText || m.rawText });
+      } else {
+        var bodyText = (m.rawText || '').replace(/\[\[STATUS\]\][\s\S]*?\[\[\/STATUS\]\]/, '').trim();
+        contextMsgs.push({ role: 'assistant', content: bodyText });
+      }
+    }
+    contextMsgs.push({ role: 'user', content: '现在直接输出 ' + userName + ' 的回复，不要有任何多余内容：' });
+    var apiFormat = state.apiSettings.format || 'openai';
+    var url = getApiEndpoint(state.apiSettings.baseUrl, apiFormat, 'chat');
+    var headers = getApiHeaders(state.apiSettings.apiKey, apiFormat);
+    var body = buildApiRequestBody(apiFormat, state.apiSettings.model, [{ role: 'system', content: system }, ...contextMsgs], {
+      maxTokens: 500, temperature: 0.85, stream: false
+    });
+    var response = await fetch(url, { method: 'POST', headers: headers, body: JSON.stringify(body) });
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    var data = await response.json();
+    var content = '';
+    if (data.choices && data.choices[0] && data.choices[0].message) content = data.choices[0].message.content || '';
+    else if (data.content && Array.isArray(data.content) && data.content[0]) content = data.content[0].text || '';
+    if (!content.trim()) { showToast('AI 未返回内容', 'warning'); return; }
+    var chatInput = document.getElementById('chat-input');
+    chatInput.value = content.trim();
+    autoResizeInput();
+    updateSendButton();
+    chatInput.focus();
+    showToast('已生成回复，可修改后发送', 'success');
+  } catch (err) {
+    showToast('帮回失败: ' + err.message, 'error');
+  } finally {
+    if (btn) {
+      btn.innerHTML = originalSvg;
+      btn.style.pointerEvents = '';
+    }
+  }
+}
+
+// ── 消息下方操作栏的重回（与旧版菜单里的 newver 一致） ──
+async function regenFromBar(msgId) {
+  var msg = state.messages.find(function(m) { return m.id === msgId; });
+  if (!msg || msg.role !== 'assistant') return;
+  // 直接调用与旧版长按菜单 newver 相同的逻辑
+  await handleMsgMenuAction('newver_bar', msgId, msg);
+}
 function enterMultiSelectMode(initialMsgId) {
   state.multiSelectMode = true;
   state.selectedMsgIds = new Set();
