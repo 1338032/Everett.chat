@@ -10,6 +10,10 @@
 (function(){
   var t = localStorage.getItem('xwa_theme');
   if (t === 'dark') document.documentElement.setAttribute('data-theme','dark');
+  var c = localStorage.getItem('xwa_color');
+  if (c) document.documentElement.setAttribute('data-color', c);
+  var f = localStorage.getItem('xwa_frosted');
+  if (f === 'true') document.documentElement.setAttribute('data-frosted', 'true');
 })();
 </script>
 <style>
@@ -26,13 +30,13 @@
   --text-secondary: #7A6E65;
   --text-muted: #B2A99F;
   --text-action: #5E6B61;
-  --pine: #5A8A6C;
-  --pine-hover: #4A7A5C;
-  --pine-pale: #D5E7DC;
-  --pine-ring: rgba(90,138,108,0.35);
+  --pine: #6B8F7B;
+  --pine-hover: #5A7E6A;
+  --pine-pale: #D8E8DE;
+  --pine-ring: rgba(107,143,123,0.35);
   --bubble-char: #FFFFFF;
   --bubble-char-bd: rgba(0,0,0,0.06);
-  --bubble-user: #E3EEE7;
+  --bubble-user: #E6EDE8;
   --bubble-user-bd: transparent;
   --border: rgba(0,0,0,0.08);
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
@@ -45,6 +49,9 @@
   --bubble-radius-char: 4px 18px 18px 18px;
   --bubble-radius-user: 18px 4px 18px 18px;
   --bg-image: none;
+  --bg-display: none;
+  --bg-blur-display: none;
+  --bg-blur: 0px;
   --font-size: 15px;
   --font-family: 'LXGW WenKai Screen', serif;
   --line-height: 1.85;
@@ -63,10 +70,10 @@
   --text-secondary: #9A8E85;
   --text-muted: #6A6058;
   --text-action: #8A9E90;
-  --pine: #6AAE84;
-  --pine-hover: #7DC096;
+  --pine: #7AB892;
+  --pine-hover: #8CCAA4;
   --pine-pale: #1A2E22;
-  --pine-ring: rgba(106,174,132,0.35);
+  --pine-ring: rgba(122,184,146,0.35);
   --bubble-char: #2A2724;
   --bubble-char-bd: rgba(255,255,255,0.07);
   --bubble-user: #1E2E24;
@@ -74,7 +81,208 @@
   --shadow-sm: 0 1px 3px rgba(0,0,0,0.25);
   --shadow-md: 0 4px 16px rgba(0,0,0,0.3);
 }
+/* ══════════════════════════════════════════════════════
+   内置颜色主题
+   ══════════════════════════════════════════════════════ */
+[data-color="warm-orange"] {
+  --pine: #BF7B3F;
+  --pine-hover: #A86A30;
+  --pine-pale: #F8EAD8;
+  --pine-ring: rgba(191,123,63,0.30);
+  --bubble-char: #FFFBF6;
+  --bubble-char-bd: rgba(180,130,70,0.10);
+  --bubble-user: #F5E4D0;
+  --bubble-user-bd: transparent;
+  --text-action: #956840;
+  --bg-base: #FBF6F0;
+  --bg-surface: #F5EDE3;
+  --bg-overlay: #EFE5D8;
+  --bg-input: #FDFAF6;
+  --text-primary: #3A2E24;
+  --text-secondary: #8A7460;
+  --text-muted: #BCA890;
+  --border: rgba(160,120,70,0.12);
+}
+[data-color="warm-orange"][data-theme="dark"] {
+  --pine: #D89850;
+  --pine-hover: #E8AA62;
+  --pine-pale: #2E231A;
+  --pine-ring: rgba(216,152,80,0.30);
+  --bubble-char: #2E2822;
+  --bubble-char-bd: rgba(216,152,80,0.12);
+  --bubble-user: #302618;
+  --bubble-user-bd: transparent;
+  --text-action: #C8A070;
+  --bg-base: #1C1814;
+  --bg-surface: #242018;
+  --bg-overlay: #2C261E;
+  --bg-input: #201C16;
+  --text-primary: #E8DDD0;
+  --text-secondary: #A89880;
+  --text-muted: #6A5E50;
+  --border: rgba(200,160,100,0.12);
+}
+[data-color="mono-bw"] {
+  --pine: #555555;
+  --pine-hover: #444444;
+  --pine-pale: #E8E8E8;
+  --pine-ring: rgba(85,85,85,0.30);
+  --bubble-char: #FFFFFF;
+  --bubble-char-bd: rgba(0,0,0,0.10);
+  --bubble-user: #EBEBEB;
+  --bubble-user-bd: rgba(0,0,0,0.06);
+  --text-action: #666666;
+  --bg-base: #F5F5F5;
+  --bg-surface: #EEEEEE;
+  --bg-overlay: #E8E8E8;
+  --bg-input: #FAFAFA;
+  --text-primary: #1A1A1A;
+  --text-secondary: #666666;
+  --text-muted: #AAAAAA;
+  --border: rgba(0,0,0,0.10);
+}
+[data-color="mono-bw"][data-theme="dark"] {
+  --pine: #AAAAAA;
+  --pine-hover: #BBBBBB;
+  --pine-pale: #252525;
+  --pine-ring: rgba(170,170,170,0.30);
+  --bubble-char: #2A2A2A;
+  --bubble-char-bd: rgba(255,255,255,0.10);
+  --bubble-user: #222222;
+  --bubble-user-bd: rgba(255,255,255,0.06);
+  --text-action: #999999;
+  --bg-base: #161616;
+  --bg-surface: #1E1E1E;
+  --bg-overlay: #252525;
+  --bg-input: #1A1A1A;
+  --text-primary: #E0E0E0;
+  --text-secondary: #999999;
+  --text-muted: #606060;
+  --border: rgba(255,255,255,0.10);
+}
+[data-color="sky-blue"] {
+  --pine: #4A80B8;
+  --pine-hover: #3A70A8;
+  --pine-pale: #D8E6F5;
+  --pine-ring: rgba(74,128,184,0.30);
+  --bubble-char: #F8FBFF;
+  --bubble-char-bd: rgba(70,120,180,0.10);
+  --bubble-user: #DDE8F5;
+  --bubble-user-bd: transparent;
+  --text-action: #5878A0;
+  --bg-base: #F5F8FC;
+  --bg-surface: #EDF2F8;
+  --bg-overlay: #E4EBF4;
+  --bg-input: #F9FBFE;
+  --text-primary: #1E2A38;
+  --text-secondary: #5A7088;
+  --text-muted: #98AABB;
+  --border: rgba(70,120,180,0.10);
+}
+[data-color="sky-blue"][data-theme="dark"] {
+  --pine: #6AA0D8;
+  --pine-hover: #7CB2EA;
+  --pine-pale: #182430;
+  --pine-ring: rgba(106,160,216,0.30);
+  --bubble-char: #222A32;
+  --bubble-char-bd: rgba(106,160,216,0.12);
+  --bubble-user: #1A2530;
+  --bubble-user-bd: transparent;
+  --text-action: #80A8C8;
+  --bg-base: #141A22;
+  --bg-surface: #1A222C;
+  --bg-overlay: #202A36;
+  --bg-input: #182028;
+  --text-primary: #D8E4F0;
+  --text-secondary: #80A0B8;
+  --text-muted: #4A6070;
+  --border: rgba(100,160,220,0.12);
+}
+[data-color="rose-pink"] {
+  --pine: #C46E88;
+  --pine-hover: #B45E78;
+  --pine-pale: #F8D8E2;
+  --pine-ring: rgba(196,110,136,0.30);
+  --bubble-char: #FFFBFC;
+  --bubble-char-bd: rgba(196,110,136,0.10);
+  --bubble-user: #F5DDE5;
+  --bubble-user-bd: transparent;
+  --text-action: #A06878;
+  --bg-base: #FCF5F7;
+  --bg-surface: #F8EDF0;
+  --bg-overlay: #F2E4EA;
+  --bg-input: #FDF8FA;
+  --text-primary: #3A2028;
+  --text-secondary: #907078;
+  --text-muted: #C0A8B0;
+  --border: rgba(196,110,136,0.10);
+}
+[data-color="rose-pink"][data-theme="dark"] {
+  --pine: #D88898;
+  --pine-hover: #E898A8;
+  --pine-pale: #2E1A22;
+  --pine-ring: rgba(216,136,152,0.30);
+  --bubble-char: #2E2228;
+  --bubble-char-bd: rgba(216,136,152,0.12);
+  --bubble-user: #2C1A22;
+  --bubble-user-bd: transparent;
+  --text-action: #C8909A;
+  --bg-base: #1C1418;
+  --bg-surface: #24181E;
+  --bg-overlay: #2C2026;
+  --bg-input: #201820;
+  --text-primary: #F0D8E0;
+  --text-secondary: #A88898;
+  --text-muted: #685060;
+  --border: rgba(200,130,150,0.12);
+}
 
+/* ══════════════════════════════════════════════════════
+   磨砂效果
+   ══════════════════════════════════════════════════════ */
+[data-frosted="true"] #top-bar {
+  background: color-mix(in srgb, var(--bg-surface) 55%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
+}
+[data-frosted="true"] .status-toggle-btn {
+  background: color-mix(in srgb, var(--bg-surface) 55%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
+}
+[data-frosted="true"] .status-drawer {
+  background: color-mix(in srgb, var(--bg-surface) 55%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
+}
+[data-frosted="true"] #input-wrap {
+  background: color-mix(in srgb, var(--bg-surface) 55%, transparent) !important;
+  backdrop-filter: blur(20px) saturate(1.4) !important;
+  -webkit-backdrop-filter: blur(20px) saturate(1.4) !important;
+}
+[data-frosted="true"] .char-bubble {
+  background: color-mix(in srgb, var(--bubble-char) 65%, transparent) !important;
+  backdrop-filter: blur(16px) saturate(1.3) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.3) !important;
+  border: 1px solid rgba(255,255,255,0.15) !important;
+}
+[data-frosted="true"] .user-bubble {
+  background: color-mix(in srgb, var(--bubble-user) 65%, transparent) !important;
+  backdrop-filter: blur(16px) saturate(1.3) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.3) !important;
+  border: 1px solid rgba(255,255,255,0.12) !important;
+}
+[data-frosted="true"] .waiting-content {
+  background: color-mix(in srgb, var(--bubble-char) 65%, transparent) !important;
+  backdrop-filter: blur(16px) saturate(1.3) !important;
+  -webkit-backdrop-filter: blur(16px) saturate(1.3) !important;
+}
+[data-frosted="true"][data-theme="dark"] .char-bubble {
+  border: 1px solid rgba(255,255,255,0.08) !important;
+}
+[data-frosted="true"][data-theme="dark"] .user-bubble {
+  border: 1px solid rgba(255,255,255,0.06) !important;
+}
 /* ══════════════════════════════════════════════════════
    Reset & 基础排版
    ══════════════════════════════════════════════════════ */
@@ -106,9 +314,24 @@ a { color:inherit; text-decoration:none; }
 #app {
   display:flex; flex-direction:column;
   height:100dvh; width:100%;
-  background: var(--bg-base) var(--bg-image) center/cover;
-  background-attachment:fixed;
+  background: var(--bg-base);
   position:relative;
+}
+#app-bg {
+  position:fixed; inset:0; z-index:0;
+  pointer-events:none;
+  background: var(--bg-image) center/cover no-repeat;
+  background-attachment:fixed;
+  display: var(--bg-display, none);
+}
+#app-bg-blur {
+  position:fixed; inset:0; z-index:0;
+  pointer-events:none;
+  background: var(--bg-image) center/cover no-repeat;
+  background-attachment:fixed;
+  filter: blur(var(--bg-blur, 0px));
+  transform: scale(1.1);
+  display: var(--bg-blur-display, none);
 }
 
 /* 亚麻纸纹理 */
@@ -900,6 +1123,21 @@ a { color:inherit; text-decoration:none; }
   align-self:flex-end;
 }
 .bubble-shape-card .shape-name { font-size:11px; color:var(--text-muted); }
+/* 颜色主题选择 */
+.color-theme-grid { display:flex; gap:10px; flex-wrap:wrap; }
+.color-theme-card {
+  width:56px; height:56px; border-radius:var(--radius-sm);
+  border:2px solid var(--border); cursor:pointer;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  gap:4px; transition:border-color 150ms;
+  position:relative; overflow:hidden;
+}
+.color-theme-card.active { border-color:var(--pine); }
+.color-theme-card:hover { border-color:var(--text-muted); }
+.color-theme-card .ct-swatch {
+  width:24px; height:24px; border-radius:50%;
+}
+.color-theme-card .ct-name { font-size:10px; color:var(--text-muted); white-space:nowrap; }
 /* 自定义字体预设 */
 .font-preset-bar {
   display:flex; align-items:center; gap:8px;
@@ -1292,7 +1530,96 @@ a { color:inherit; text-decoration:none; }
   transition:background 150ms;
 }
 .load-more-btn:hover { background:var(--bg-hover); }
-
+/* 数据状态面板 */
+.data-stats-panel {
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--bg-input);
+  padding:14px;
+  margin-bottom:16px;
+}
+.data-stats-grid {
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px 16px;
+}
+.data-stat-item {
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:6px 0;
+}
+.data-stat-label {
+  font-size:13px;
+  color:var(--text-muted);
+}
+.data-stat-value {
+  font-size:13px;
+  color:var(--text-secondary);
+  font-weight:500;
+  font-family:system-ui, -apple-system, sans-serif;
+}
+.data-stat-bar {
+  grid-column:1 / -1;
+  height:6px;
+  background:var(--border);
+  border-radius:3px;
+  overflow:hidden;
+  margin-top:4px;
+}
+.data-stat-bar-inner {
+  height:100%;
+  background:var(--pine);
+  border-radius:3px;
+  transition:width 300ms ease;
+}
+.data-stat-total {
+  grid-column:1 / -1;
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:8px 0 4px;
+  border-top:1px solid var(--border);
+  margin-top:4px;
+}
+.data-stat-total .data-stat-label {
+  font-size:14px;
+  color:var(--text-primary);
+  font-weight:500;
+}
+.data-stat-total .data-stat-value {
+  font-size:14px;
+  color:var(--pine);
+  font-weight:600;
+}
+/* 旧数据清理 */
+.cleanup-chips {
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  margin-top:8px;
+}
+.cleanup-chip {
+  padding:6px 14px;
+  border-radius:var(--radius-full);
+  font-size:13px;
+  border:1px solid var(--border);
+  background:var(--bg-surface);
+  color:var(--text-secondary);
+  cursor:pointer;
+  transition:background 150ms, border-color 150ms;
+}
+.cleanup-chip:hover {
+  background:var(--bg-hover);
+  border-color:var(--text-muted);
+}
+.cleanup-chip.danger {
+  border-color:var(--error-color);
+  color:var(--error-color);
+}
+.cleanup-chip.danger:hover {
+  background:rgba(197,48,48,0.08);
+}
 /* 短期记忆展开 */
 .short-term-preview {
   border:1px solid var(--border); border-radius:var(--radius-sm);
@@ -1777,6 +2104,8 @@ a { color:inherit; text-decoration:none; }
 
 <!-- 主应用 -->
 <div id="app">
+  <div id="app-bg"></div>
+  <div id="app-bg-blur"></div>
 
   <!-- 顶部栏 -->
   <header id="top-bar">
@@ -2112,9 +2441,73 @@ a { color:inherit; text-decoration:none; }
         <!-- 数据管理 -->
         <div class="settings-pane active" id="sp-data">
           <div class="settings-section">
-            <h3>清除所有数据</h3>
-            <p class="desc">删除所有对话、记忆和设置，操作不可撤销</p>
-            <button class="btn-primary btn-danger" id="btn-clear-all" style="background:var(--error-color)">清除</button>
+            <h3>数据概览</h3>
+            <p class="desc">当前存储空间使用情况（点击刷新按钮更新）</p>
+            <div class="data-stats-panel" id="data-stats-panel">
+              <div class="data-stats-grid">
+                <div class="data-stat-item">
+                  <span class="data-stat-label">对话消息</span>
+                  <span class="data-stat-value" id="ds-messages">计算中...</span>
+                </div>
+                <div class="data-stat-item">
+                  <span class="data-stat-label">长期记忆</span>
+                  <span class="data-stat-value" id="ds-lt-mem">0 条</span>
+                </div>
+                <div class="data-stat-item">
+                  <span class="data-stat-label">核心记忆</span>
+                  <span class="data-stat-value" id="ds-core-mem">0 条</span>
+                </div>
+                <div class="data-stat-item">
+                  <span class="data-stat-label">世界书</span>
+                  <span class="data-stat-value" id="ds-worldbook">0 条</span>
+                </div>
+                <div class="data-stat-item">
+                  <span class="data-stat-label">表情包</span>
+                  <span class="data-stat-value" id="ds-emojis">0 个</span>
+                </div>
+                <div class="data-stat-item">
+                  <span class="data-stat-label">收藏</span>
+                  <span class="data-stat-value" id="ds-favorites">0 条</span>
+                </div>
+                <div class="data-stat-item">
+                  <span class="data-stat-label">书库</span>
+                  <span class="data-stat-value" id="ds-books">0 本</span>
+                </div>
+                <div class="data-stat-item">
+                  <span class="data-stat-label">图片/缓存</span>
+                  <span class="data-stat-value" id="ds-blobs">计算中...</span>
+                </div>
+                <div class="data-stat-bar">
+                  <div class="data-stat-bar-inner" id="ds-bar" style="width:0%"></div>
+                </div>
+                <div class="data-stat-total">
+                  <span class="data-stat-label">预估总大小</span>
+                  <span class="data-stat-value" id="ds-total">计算中...</span>
+                </div>
+              </div>
+            </div>
+            <button class="btn-secondary" id="btn-refresh-stats" style="font-size:13px">
+              <svg viewBox="0 0 24 24" style="width:14px;height:14px;stroke:var(--text-secondary);stroke-width:1.5;fill:none;margin-right:2px"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+              刷新统计
+            </button>
+          </div>
+          <div class="settings-section">
+            <h3>清理旧对话</h3>
+            <p class="desc">删除指定时间之前的对话消息，设定和记忆不受影响</p>
+            <div class="cleanup-chips">
+              <button class="cleanup-chip" data-cleanup-days="7">一周前</button>
+              <button class="cleanup-chip" data-cleanup-days="30">一个月前</button>
+              <button class="cleanup-chip" data-cleanup-days="90">三个月前</button>
+              <button class="cleanup-chip" data-cleanup-days="custom">自定义天数</button>
+            </div>
+            <div id="cleanup-custom-row" style="display:none;margin-top:10px">
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:13px;color:var(--text-secondary)">删除</span>
+                <input class="form-input" type="number" id="cleanup-custom-days" value="60" min="1" max="3650" style="width:80px">
+                <span style="font-size:13px;color:var(--text-secondary)">天前的对话</span>
+                <button class="btn-primary cleanup-chip danger" id="btn-cleanup-custom-go" style="padding:6px 14px">执行</button>
+              </div>
+            </div>
           </div>
           <div class="settings-section">
             <h3>压缩数据</h3>
@@ -2122,13 +2515,24 @@ a { color:inherit; text-decoration:none; }
             <div style="display:flex;align-items:center;gap:10px;margin-top:8px">
               <label class="form-label" style="margin:0">保留数量</label>
               <input class="form-input" type="number" id="compress-count" value="200" min="10" max="10000" style="width:80px">
-              <button class="btn-primary" id="btn-compress">压缩</button>
+              <button class="btn-primary" id="btn-compress">压缩对话</button>
             </div>
+          </div>
+          <div class="settings-section">
+            <h3>深度压缩</h3>
+            <p class="desc">在不删除对话的情况下，清理冗余数据（如已删除消息的残留缓存、orphan blob等），释放存储空间</p>
+            <button class="btn-primary" id="btn-deep-compress">深度压缩</button>
+            <span id="deep-compress-hint" style="font-size:12px;color:var(--text-muted);margin-left:8px"></span>
           </div>
           <div class="settings-section">
             <h3>清空对话记录</h3>
             <p class="desc">删除所有对话消息，但保留角色设定、记忆、世界书等配置</p>
             <button class="btn-primary" id="btn-clear-messages" style="background:var(--warning-color)">清空对话</button>
+          </div>
+          <div class="settings-section">
+            <h3>清除所有数据</h3>
+            <p class="desc">删除所有对话、记忆和设置，操作不可撤销</p>
+            <button class="btn-primary btn-danger" id="btn-clear-all" style="background:var(--error-color)">清除</button>
           </div>
           <div class="settings-section">
             <h3>导出数据</h3>
@@ -2290,6 +2694,26 @@ a { color:inherit; text-decoration:none; }
               <input type="file" accept="image/*" id="bg-file" style="display:none">
             </div>
             <div id="bg-preview" style="margin-top:8px"></div>
+             <div style="margin-top:12px">
+              <label class="form-label">背景模糊程度</label>
+              <div class="range-row">
+                <input type="range" id="page-bg-blur" min="0" max="100" step="1" value="0">
+                <span class="range-val" id="page-bg-blur-val">0%</span>
+              </div>
+            </div>
+          </div>
+          <div class="settings-section">
+            <h3>颜色主题</h3>
+            <p class="desc">更换整体配色风格</p>
+            <div class="color-theme-grid" id="color-theme-grid"></div>
+          </div>
+          <div class="settings-section">
+            <h3>磨砂效果</h3>
+            <div class="settings-row" style="border-bottom:1px solid var(--border)">
+              <span class="settings-row-label">磨砂半透明</span>
+              <div class="toggle" id="toggle-frosted"></div>
+            </div>
+            <p class="desc" style="margin-top:4px">开启后顶栏、状态栏、底栏、气泡变为磨砂半透明效果，搭配背景图效果更佳</p>
           </div>
           <div class="settings-section">
             <h3>气泡形状</h3>
@@ -3090,7 +3514,9 @@ const state = {
   pageSettings: {
     fontFamily: 'lxgw', fontSize: 15, lineHeight: 1.85,
     backgroundImage: '', bubbleShape: 'asymmetric',
-    charBubbleColor: '', userBubbleColor: ''
+    charBubbleColor: '', userBubbleColor: '',
+    charBubbleColor: '', userBubbleColor: '',
+    colorTheme: '', frostedEnabled: false, bgBlur: 0
   },
   messages: [],
   longTermMemory: [],
@@ -3937,6 +4363,38 @@ function applyPageSettings() {
   } else {
     document.documentElement.style.removeProperty('--bubble-user');
   }
+  // 颜色主题
+  if (s.colorTheme) {
+    document.documentElement.setAttribute('data-color', s.colorTheme);
+    localStorage.setItem('xwa_color', s.colorTheme);
+  } else {
+    document.documentElement.removeAttribute('data-color');
+    localStorage.removeItem('xwa_color');
+  }
+  // 磨砂效果
+  if (s.frostedEnabled) {
+    document.documentElement.setAttribute('data-frosted', 'true');
+    localStorage.setItem('xwa_frosted', 'true');
+  } else {
+    document.documentElement.removeAttribute('data-frosted');
+    localStorage.removeItem('xwa_frosted');
+  }
+  // 背景图显示控制
+  var hasBg = !!s.backgroundImage;
+  var blurVal = s.bgBlur || 0;
+  if (hasBg && blurVal > 0) {
+    document.documentElement.style.setProperty('--bg-display', 'none');
+    document.documentElement.style.setProperty('--bg-blur-display', 'block');
+    document.documentElement.style.setProperty('--bg-blur', blurVal + 'px');
+  } else if (hasBg) {
+    document.documentElement.style.setProperty('--bg-display', 'block');
+    document.documentElement.style.setProperty('--bg-blur-display', 'none');
+    document.documentElement.style.setProperty('--bg-blur', '0px');
+  } else {
+    document.documentElement.style.setProperty('--bg-display', 'none');
+    document.documentElement.style.setProperty('--bg-blur-display', 'none');
+    document.documentElement.style.setProperty('--bg-blur', '0px');
+  }
 }
 let _loadedFontUrl = '';
 function loadCustomFontCSS(url) {
@@ -4026,7 +4484,56 @@ function readFileAsDataURL(file) {
     reader.readAsDataURL(file);
   });
 }
-
+function urlToBase64(url, maxDimension) {
+  var maxDim = maxDimension || 256;
+  return new Promise(function(resolve, reject) {
+    if (!url) { reject(new Error('空URL')); return; }
+    if (url.startsWith('data:image/')) { resolve(url); return; }
+    var img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = function() {
+      try {
+        var w = img.naturalWidth;
+        var h = img.naturalHeight;
+        var scale = 1;
+        if (w > maxDim || h > maxDim) {
+          scale = w > h ? (maxDim / w) : (maxDim / h);
+        }
+        var newW = Math.round(w * scale);
+        var newH = Math.round(h * scale);
+        var canvas = document.createElement('canvas');
+        canvas.width = newW;
+        canvas.height = newH;
+        var ctx = canvas.getContext('2d');
+        if (!ctx) { resolve(url); return; }
+        ctx.drawImage(img, 0, 0, newW, newH);
+        var dataUrl = canvas.toDataURL('image/png', 0.85);
+        canvas.width = 0;
+        canvas.height = 0;
+        resolve(dataUrl);
+      } catch (e) {
+        resolve(url);
+      }
+    };
+    img.onerror = function() {
+      resolve(url);
+    };
+    var timeoutId = setTimeout(function() {
+      resolve(url);
+    }, 5000);
+    var origOnload = img.onload;
+    img.onload = function() {
+      clearTimeout(timeoutId);
+      origOnload.call(this);
+    };
+    var origOnerror = img.onerror;
+    img.onerror = function() {
+      clearTimeout(timeoutId);
+      origOnerror.call(this);
+    };
+    img.src = url;
+  });
+}
 function compressImage(file, maxDimension, quality) {
   var maxDim = maxDimension || 1024;
   var qual = quality || 0.85;
@@ -4115,13 +4622,24 @@ async function sendImageMessage(dataUrl, fileName) {
 }
 
 async function sendEmojiDirectly(emoji) {
+  var b64Url = emoji.url;
+  try {
+    b64Url = await urlToBase64(emoji.url, 256);
+  } catch (_) {
+    b64Url = emoji.url;
+  }
+  var b64ConvertSuccess = b64Url && b64Url.startsWith('data:image/');
+  if (!b64ConvertSuccess) {
+    showToast('表情包图片无法转码，AI可能无法识别图片内容', 'warning', 4000);
+  }
+
   var msg = {
     id: genId('msg'),
     role: 'user',
     rawText: '[emo:' + emoji.name + ']',
     displayParts: [],
     userText: '[emo:' + emoji.name + ']',
-    emojiRefs: [{ name: emoji.name, url: emoji.url }],
+    emojiRefs: [{ name: emoji.name, url: emoji.url, b64: b64Url }],
     imageRefs: [],
     status: null,
     timestamp: Date.now(),
@@ -4155,7 +4673,15 @@ async function sendMessage() {
     const name = match[1];
     const emoji = state.emojis.find(e => e.name === name);
     if (emoji) {
-      emojiRefs.push({ name: emoji.name, url: emoji.url });
+      emojiRefs.push({ name: emoji.name, url: emoji.url, b64: null });
+    }
+  }
+
+  for (var _ei = 0; _ei < emojiRefs.length; _ei++) {
+    try {
+      emojiRefs[_ei].b64 = await urlToBase64(emojiRefs[_ei].url, 256);
+    } catch (_) {
+      emojiRefs[_ei].b64 = emojiRefs[_ei].url;
     }
   }
 
@@ -4334,11 +4860,41 @@ function buildMessages() {
   const apiMessages = [];
   for (const msg of recent) {
     if (msg.role === 'user') {
-      let content = msg.userText || msg.rawText;
+      let textContent = msg.userText || msg.rawText;
       if (state.apiSettings.enableRealTime && msg.timestamp) {
-        content = '[' + formatTimestamp(msg.timestamp) + ']\n' + content;
+        textContent = '[' + formatTimestamp(msg.timestamp) + ']\n' + textContent;
       }
-      apiMessages.push({ role: 'user', content: content });
+      var hasImages = msg.imageRefs && msg.imageRefs.length > 0;
+      var hasEmojiImages = msg.emojiRefs && msg.emojiRefs.length > 0;
+      if (hasImages || hasEmojiImages) {
+        var visionParts = [];
+        var cleanText = textContent.replace(/\[图片:[^\]]*\]/g, '').replace(/\[emo:[^\]]*\]/g, '').trim();
+        if (hasEmojiImages && !hasImages) {
+          visionParts.push({ type: 'text', text: cleanText || '（用户发送了表情包图片，请仔细观察图片中的表情、文字、动作等细节来理解用户想表达的情绪和意思，并在回复中自然地回应这份情绪）' });
+        } else {
+          visionParts.push({ type: 'text', text: cleanText || '（用户发送了图片，请观察图片内容并自然回应）' });
+        }
+        if (hasImages) {
+          for (var imgIdx = 0; imgIdx < msg.imageRefs.length; imgIdx++) {
+            var imgRef = msg.imageRefs[imgIdx];
+            if (imgRef.url) {
+              visionParts.push({ type: 'image_url', image_url: { url: imgRef.url } });
+            }
+          }
+        }
+        if (hasEmojiImages) {
+          for (var emoIdx = 0; emoIdx < msg.emojiRefs.length; emoIdx++) {
+            var emoRef = msg.emojiRefs[emoIdx];
+            var emoSrc = (emoRef.b64 && emoRef.b64.startsWith('data:image/')) ? emoRef.b64 : emoRef.url;
+            if (emoSrc && emoSrc.match(/^(data:image\/|https?:\/\/)/)) {
+              visionParts.push({ type: 'image_url', image_url: { url: emoSrc } });
+            }
+          }
+        }
+        apiMessages.push({ role: 'user', content: visionParts });
+      } else {
+        apiMessages.push({ role: 'user', content: textContent });
+      }
     } else {
       let content = (msg.rawText || '').replace(/\[\[STATUS\]\][\s\S]*?\[\[\/STATUS\]\]/, '').trim();
       if (state.apiSettings.enableRealTime && msg.timestamp) {
@@ -4382,8 +4938,14 @@ function buildMessages() {
         allEmojiRefs.push(...pm.emojiRefs);
       }
     }
-    for (const ref of allEmojiRefs) {
-      combined += '\n[表情包:' + ref.name + '] ' + ref.url;
+    var pendingHasEmojiB64 = false;
+    for (var _pei = 0; _pei < allEmojiRefs.length; _pei++) {
+      var _peRef = allEmojiRefs[_pei];
+      if (_peRef.b64 && _peRef.b64.startsWith('data:image/')) {
+        pendingHasEmojiB64 = true;
+      } else {
+        combined += '\n[表情包:' + _peRef.name + '（请识别图片内容理解情绪）]';
+      }
     }
 
     // 检查是否有图片消息需要用 vision 格式
@@ -4397,18 +4959,30 @@ function buildMessages() {
       }
     }
 
-    if (allImageRefs.length > 0) {
+    var hasVisionContent = allImageRefs.length > 0 || pendingHasEmojiB64;
+    if (hasVisionContent) {
       var contentParts = [];
       if (combined.trim()) {
         contentParts.push({ type: 'text', text: combined.trim() });
+      } else if (allImageRefs.length > 0) {
+        contentParts.push({ type: 'text', text: '（用户发送了图片，请观察图片内容并自然回应）' });
       } else {
-        contentParts.push({ type: 'text', text: '（用户发送了图片）' });
+        contentParts.push({ type: 'text', text: '（用户发送了表情包图片，请仔细观察图片中的表情、文字、动作等细节来理解用户想表达的情绪和意思，并在回复中自然地回应这份情绪）' });
       }
       for (var imgI = 0; imgI < allImageRefs.length; imgI++) {
         contentParts.push({
           type: 'image_url',
           image_url: { url: allImageRefs[imgI].url }
         });
+      }
+      for (var _pei2 = 0; _pei2 < allEmojiRefs.length; _pei2++) {
+        var _peRef2 = allEmojiRefs[_pei2];
+        if (_peRef2.b64 && _peRef2.b64.startsWith('data:image/')) {
+          contentParts.push({
+            type: 'image_url',
+            image_url: { url: _peRef2.b64 }
+          });
+        }
       }
       apiMessages.push({ role: 'user', content: contentParts });
     } else {
@@ -4545,10 +5119,18 @@ async function receiveReply() {
     if (!response.ok) {
       const errText = await response.text().catch(() => '');
       let errMsg = '请求失败';
-      if (response.status === 401) errMsg = 'API Key 无效';
-      else if (response.status === 429) errMsg = '超出请求限额';
-      else if (response.status >= 500) errMsg = '服务暂时不可用';
-      else errMsg = 'HTTP ' + response.status + ': ' + (errText || response.statusText);
+      if (response.status === 401) errMsg = '❌ API 密钥无效或已过期，请到设置中检查密钥是否正确';
+      else if (response.status === 403) errMsg = '🚫 没有权限访问该模型，请确认 API 密钥的权限范围';
+      else if (response.status === 404) errMsg = '🔍 API 地址不正确，请检查地址末尾是否多了路径，或格式选择是否匹配';
+      else if (response.status === 429) errMsg = '⏳ 请求太频繁或额度已用完，请稍后再试或检查账户余额';
+      else if (response.status === 502 || response.status === 503) errMsg = '🔧 AI 服务暂时不可用，通常几分钟后会恢复，请稍后重试';
+      else if (response.status >= 500) errMsg = '💥 服务器内部错误 (' + response.status + ')，请稍后重试';
+      else if (response.status === 400) {
+        var errDetail = '';
+        try { var ej = JSON.parse(errText); errDetail = (ej.error && ej.error.message) || ''; } catch(_){}
+        errMsg = '⚠️ 请求参数有误' + (errDetail ? '：' + errDetail.slice(0, 100) : '，请检查模型名称是否正确');
+      }
+      else errMsg = '请求失败 (HTTP ' + response.status + ')' + (errText ? '：' + errText.slice(0, 120) : '');
       throw new Error(errMsg);
     }
     // 非流式处理
@@ -4933,7 +5515,12 @@ var toSummarize = nonWelcome.slice(-sliceCount);
   for (var i = 0; i < toSummarize.length; i++) {
     var m = toSummarize[i];
     if (m.role === 'user') {
-      dialogText += userName + '：' + (m.userText || m.rawText) + '\n';
+      var memUserText = (m.userText || m.rawText || '');
+      memUserText = memUserText.replace(/\[emo:([^\]]+)\]/g, '（发了表情包：$1）');
+      memUserText = memUserText.replace(/\[图片:[^\]]*\]/g, '（发了一张图片）');
+      if (m.isEmojiOnly) memUserText = '（发送了表情包）';
+      if (m.isImageOnly) memUserText = '（发送了图片）';
+      dialogText += userName + '：' + memUserText + '\n';
     } else {
       var body = (m.rawText || '').replace(/\[\[STATUS\]\][\s\S]*?\[\[\/STATUS\]\]/, '').trim();
       dialogText += charName + '：' + body + '\n';
@@ -4974,6 +5561,7 @@ var toSummarize = nonWelcome.slice(-sliceCount);
   systemPrompt += '5. 不需要频繁提及具体时间，除非时间本身是重要信息（如约定、纪念日等）\n';
   systemPrompt += '6. 语言简练自然，控制在 100～200 字\n'
   systemPrompt += '7. 这是一条独立的新记忆条目，不需要与以前的记忆合并或承接\n';
+  systemPrompt += '8. 对话中出现的"（发送了表情包）"或"（发送了图片）"只需简要提及情绪互动即可，不必详细描述表情包或图片本身\n';
 
   if (state.memorySettings.coreMemoryEnabled) {
     systemPrompt += '\n【核心记忆提取任务】\n\n';
@@ -5181,6 +5769,10 @@ function initMsgLongPress() {
     var actType = actBtn.dataset.actType;
     var actMsgId = actBtn.dataset.actMsgId;
     if (!actType || !actMsgId) return;
+    if (state.isGenerating) { showToast('正在生成中，请稍候', 'warning'); return; }
+    if (actBtn._actDebouncing) return;
+    actBtn._actDebouncing = true;
+    setTimeout(function() { actBtn._actDebouncing = false; }, 800);
     if (actType === 'continue') {
       continueWriting(actMsgId);
     } else if (actType === 'regen') {
@@ -5379,6 +5971,21 @@ async function handleMsgMenuAction(action, msgId, msg) {
     } catch (_) {}
     state.messages = state.messages.filter(m => m.id !== msgId);
     state.pendingMessages = state.pendingMessages.filter(m => m.id !== msgId);
+    var foundStatus = false;
+    for (var si = state.messages.length - 1; si >= 0; si--) {
+      if (state.messages[si].status) {
+        updateStatusBar(state.messages[si].status);
+        foundStatus = true;
+        break;
+      }
+    }
+    if (!foundStatus) {
+      state.lastStatus = null;
+      document.getElementById('status-toggle-bar').classList.remove('has-status');
+      document.getElementById('status-drawer').classList.remove('open');
+      state.statusDrawerOpen = false;
+      document.documentElement.style.setProperty('--statusbar-height', '0px');
+    }
     renderAllMessages();
     updateSendButton();
     showToast('消息已删除', 'success');
@@ -5706,6 +6313,21 @@ async function deleteSelectedMessages() {
   }
   state.messages = state.messages.filter(m => !idsToDelete.has(m.id));
   state.pendingMessages = state.pendingMessages.filter(m => !idsToDelete.has(m.id));
+  var foundStatusMS = false;
+  for (var msi = state.messages.length - 1; msi >= 0; msi--) {
+    if (state.messages[msi].status) {
+      updateStatusBar(state.messages[msi].status);
+      foundStatusMS = true;
+      break;
+    }
+  }
+  if (!foundStatusMS) {
+    state.lastStatus = null;
+    document.getElementById('status-toggle-bar').classList.remove('has-status');
+    document.getElementById('status-drawer').classList.remove('open');
+    state.statusDrawerOpen = false;
+    document.documentElement.style.setProperty('--statusbar-height', '0px');
+  }
   exitMultiSelectMode();
   renderAllMessages();
   updateSendButton();
@@ -6473,6 +7095,11 @@ const customArea = document.getElementById('custom-font-area');
   }
   renderFontPresets();
   renderBubbleShapeGrid();
+  renderColorThemeGrid();
+  var frostedToggle = document.getElementById('toggle-frosted');
+  frostedToggle.classList.toggle('on', !!state.pageSettings.frostedEnabled);
+  document.getElementById('page-bg-blur').value = state.pageSettings.bgBlur || 0;
+  document.getElementById('page-bg-blur-val').textContent = (state.pageSettings.bgBlur || 0) + '%';
 
   // 记忆设置
   const mem = state.memorySettings;
@@ -6490,8 +7117,63 @@ const customArea = document.getElementById('custom-font-area');
   refreshLTMemList();
   refreshShortTermInfo();
   refreshMemorySummaryInfo();
+  refreshDataStats();
+}
+// ── 颜色主题 ──
+var COLOR_THEMES = [
+  { id: '', name: '默认', swatch: '#6B8F7B' },
+  { id: 'warm-orange', name: '暖橙', swatch: '#C07A40' },
+  { id: 'mono-bw', name: '黑白', swatch: '#555555' },
+  { id: 'sky-blue', name: '淡蓝', swatch: '#4A7FB5' },
+  { id: 'rose-pink', name: '粉红', swatch: '#C07088' }
+];
+
+function renderColorThemeGrid() {
+  var grid = document.getElementById('color-theme-grid');
+  if (!grid) return;
+  var currentColor = state.pageSettings.colorTheme || '';
+  var html = '';
+  for (var i = 0; i < COLOR_THEMES.length; i++) {
+    var ct = COLOR_THEMES[i];
+    var active = ct.id === currentColor ? ' active' : '';
+    html += '<div class="color-theme-card' + active + '" data-color-theme="' + ct.id + '">';
+    html += '<div class="ct-swatch" style="background:' + ct.swatch + '"></div>';
+    html += '<span class="ct-name">' + escapeHtml(ct.name) + '</span>';
+    html += '</div>';
+  }
+  grid.innerHTML = html;
+  grid.querySelectorAll('.color-theme-card').forEach(function(card) {
+    card.addEventListener('click', function() {
+      var themeId = card.dataset.colorTheme;
+      applyColorTheme(themeId);
+    });
+  });
 }
 
+function applyColorTheme(themeId) {
+  state.pageSettings.colorTheme = themeId;
+  if (themeId) {
+    document.documentElement.setAttribute('data-color', themeId);
+    localStorage.setItem('xwa_color', themeId);
+  } else {
+    document.documentElement.removeAttribute('data-color');
+    localStorage.removeItem('xwa_color');
+  }
+  renderColorThemeGrid();
+  schedulePageSave();
+}
+
+function applyFrostedEffect(enabled) {
+  state.pageSettings.frostedEnabled = enabled;
+  if (enabled) {
+    document.documentElement.setAttribute('data-frosted', 'true');
+    localStorage.setItem('xwa_frosted', 'true');
+  } else {
+    document.documentElement.removeAttribute('data-frosted');
+    localStorage.removeItem('xwa_frosted');
+  }
+  schedulePageSave();
+}
 function renderBubbleShapeGrid() {
   const grid = document.getElementById('bubble-shape-grid');
   let html = '';
@@ -7506,6 +8188,11 @@ function buildApiRequestBody(format, model, messages, opts) {
                   source: { type: 'base64', media_type: mediaMatch[1], data: mediaMatch[2] }
                 });
               }
+            } else if (imgUrl.startsWith('https://') || imgUrl.startsWith('http://')) {
+              anthropicParts.push({
+                type: 'image',
+                source: { type: 'url', url: imgUrl }
+              });
             }
           }
         }
@@ -7830,6 +8517,242 @@ async function saveApiPreset() {
   showToast('预设已保存', 'success');
 }
 // ══════════════════════════════════════════════════════
+// 数据状态面板 & 旧数据清理 & 深度压缩
+// ══════════════════════════════════════════════════════
+function formatBytes(bytes) {
+  if (bytes === 0) return '0 B';
+  var units = ['B', 'KB', 'MB', 'GB'];
+  var i = 0;
+  var val = bytes;
+  while (val >= 1024 && i < units.length - 1) {
+    val /= 1024;
+    i++;
+  }
+  return val.toFixed(i === 0 ? 0 : 1) + ' ' + units[i];
+}
+
+function estimateObjectSize(obj) {
+  var str = '';
+  try { str = JSON.stringify(obj); } catch (_) { return 0; }
+  return str ? str.length * 2 : 0;
+}
+
+async function refreshDataStats() {
+  try {
+    var allMsgs = await db.getAllMessages();
+    var msgCount = allMsgs.filter(function(m) { return !m.isWelcome; }).length;
+    var msgSize = estimateObjectSize(allMsgs);
+
+    var ltMem = await db.getLongTermMemory();
+    var coreMem = await db.getCoreMemory();
+    var wb = await db.getWorldBook();
+    var emojis = await db.getEmojis();
+    var favs = await db.getFavorites();
+    var books = await db.getBooks();
+
+    var ltSize = estimateObjectSize(ltMem);
+    var coreSize = estimateObjectSize(coreMem);
+    var wbSize = estimateObjectSize(wb);
+    var emojiSize = estimateObjectSize(emojis);
+    var favSize = estimateObjectSize(favs);
+    var bookSize = estimateObjectSize(books);
+
+    var blobSize = 0;
+    var blobCount = 0;
+    for (var bk of ['char_avatar', 'user_avatar', 'page_bg']) {
+      var row = await db.getBlob(bk);
+      if (row && row.blob) {
+        blobSize += row.blob.size || 0;
+        blobCount++;
+      }
+    }
+
+    var settingsSize = estimateObjectSize(await db.getAllSettings());
+    var totalSize = msgSize + ltSize + coreSize + wbSize + emojiSize + favSize + bookSize + blobSize + settingsSize;
+
+    document.getElementById('ds-messages').textContent = msgCount + ' 条 (' + formatBytes(msgSize) + ')';
+    document.getElementById('ds-lt-mem').textContent = ltMem.length + ' 条';
+    document.getElementById('ds-core-mem').textContent = coreMem.length + ' 条';
+    document.getElementById('ds-worldbook').textContent = wb.length + ' 条';
+    document.getElementById('ds-emojis').textContent = emojis.length + ' 个';
+    document.getElementById('ds-favorites').textContent = favs.length + ' 条';
+    document.getElementById('ds-books').textContent = books.length + ' 本 (' + formatBytes(bookSize) + ')';
+    document.getElementById('ds-blobs').textContent = blobCount + ' 项 (' + formatBytes(blobSize) + ')';
+    document.getElementById('ds-total').textContent = formatBytes(totalSize);
+
+    // 进度条（以 50MB 为参考上限）
+    var maxRef = 50 * 1024 * 1024;
+    var pct = Math.min(100, Math.round(totalSize / maxRef * 100));
+    document.getElementById('ds-bar').style.width = pct + '%';
+    if (pct > 80) {
+      document.getElementById('ds-bar').style.background = 'var(--error-color)';
+    } else if (pct > 50) {
+      document.getElementById('ds-bar').style.background = 'var(--warning-color)';
+    } else {
+      document.getElementById('ds-bar').style.background = 'var(--pine)';
+    }
+  } catch (err) {
+    document.getElementById('ds-total').textContent = '统计失败';
+  }
+}
+
+async function cleanupOldMessages(days) {
+  if (!days || days < 1) return;
+  var cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+  var allMsgs = await db.getAllMessages();
+  var toDelete = allMsgs.filter(function(m) { return m.timestamp < cutoff && !m.isWelcome; });
+  if (toDelete.length === 0) {
+    showToast('没有找到 ' + days + ' 天前的对话', 'warning');
+    return;
+  }
+  var confirmed = await showConfirm('将删除 ' + days + ' 天前的 ' + toDelete.length + ' 条对话消息，此操作不可撤销。\n\n角色设定、记忆、世界书等不受影响。确认？', true);
+  if (!confirmed) return;
+  var tx = db._tx('messages', 'readwrite');
+  var store = tx.objectStore('messages');
+  for (var i = 0; i < toDelete.length; i++) {
+    store.delete(toDelete[i].id);
+  }
+  await db._txComplete(tx);
+  // 刷新内存中的消息
+  state.messages = await db.getRecentMessages(200);
+  if (state.messages.length > 0) {
+    state.oldestTimestamp = state.messages[0].timestamp;
+    var older = await db.getMessagesBefore(state.oldestTimestamp, 1);
+    state.hasMoreMessages = older.length > 0;
+  } else {
+    state.oldestTimestamp = Infinity;
+    state.hasMoreMessages = false;
+  }
+  state.pendingMessages = state.pendingMessages.filter(function(m) {
+    return state.messages.some(function(sm) { return sm.id === m.id; });
+  });
+  // 恢复状态栏
+    var foundStatusCleanup = false;
+    for (var sci = state.messages.length - 1; sci >= 0; sci--) {
+      if (state.messages[sci].status) {
+        updateStatusBar(state.messages[sci].status);
+        foundStatusCleanup = true;
+        break;
+      }
+    }
+    if (!foundStatusCleanup) {
+      state.lastStatus = null;
+      document.getElementById('status-toggle-bar').classList.remove('has-status');
+      document.getElementById('status-drawer').classList.remove('open');
+      state.statusDrawerOpen = false;
+      document.documentElement.style.setProperty('--statusbar-height', '0px');
+    }
+    renderAllMessages();
+    updateSendButton();
+    refreshDataStats();
+    showToast('已清理 ' + toDelete.length + ' 条旧对话', 'success');
+}
+
+async function deepCompress() {
+  var hintEl = document.getElementById('deep-compress-hint');
+  hintEl.textContent = '正在分析...';
+  var btn = document.getElementById('btn-deep-compress');
+  btn.disabled = true;
+  var cleaned = 0;
+  try {
+    // 1. 清理 orphan blob（引用已失效的图片缓存）
+    // 当前只保留 char_avatar, user_avatar, page_bg 三个已知 key
+    // 其他的都是 orphan
+    var knownBlobKeys = new Set(['char_avatar', 'user_avatar', 'page_bg']);
+    var allBlobKeys = [];
+    await new Promise(function(resolve, reject) {
+      var tx = db._tx('blobs', 'readonly');
+      var store = tx.objectStore('blobs');
+      var req = store.openCursor();
+      req.onsuccess = function(e) {
+        var cursor = e.target.result;
+        if (cursor) {
+          allBlobKeys.push(cursor.value.key);
+          cursor.continue();
+        } else {
+          resolve();
+        }
+      };
+      req.onerror = function() { resolve(); };
+    });
+    var orphanKeys = allBlobKeys.filter(function(k) { return !knownBlobKeys.has(k); });
+    if (orphanKeys.length > 0) {
+      var tx2 = db._tx('blobs', 'readwrite');
+      var store2 = tx2.objectStore('blobs');
+      for (var ok = 0; ok < orphanKeys.length; ok++) {
+        store2.delete(orphanKeys[ok]);
+        cleaned++;
+      }
+      await db._txComplete(tx2);
+    }
+
+    // 2. 清理消息中过大的 imageRefs base64（已发送过的图片数据可以缩小）
+    var allMsgs = await db.getAllMessages();
+    var compressedMsgs = 0;
+    for (var mi = 0; mi < allMsgs.length; mi++) {
+      var msg = allMsgs[mi];
+      var modified = false;
+      // 清理已经成功发送的 pending 标记
+      if (msg.pending && !state.pendingMessages.some(function(pm) { return pm.id === msg.id; })) {
+        msg.pending = false;
+        modified = true;
+      }
+      // 清除 imageRefs 中超大的 base64 数据（保留 URL 引用但删除内联数据以节省空间）
+      // 注意：只压缩非最近 20 条消息的图片数据
+      if (mi < allMsgs.length - 20 && msg.imageRefs && msg.imageRefs.length > 0) {
+        for (var ir = 0; ir < msg.imageRefs.length; ir++) {
+          var ref = msg.imageRefs[ir];
+          if (ref.url && ref.url.length > 50000) {
+            // 将大图片 base64 替换为占位标记，节省大量空间
+            ref.url = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI2FhYSIgZm9udC1zaXplPSIxMiI+5bey5Y6L57iqPC90ZXh0Pjwvc3ZnPg==';
+            ref.name = (ref.name || '图片') + '(已压缩)';
+            modified = true;
+            compressedMsgs++;
+          }
+        }
+      }
+      // 同样处理 emojiRefs 中的 b64
+      if (mi < allMsgs.length - 20 && msg.emojiRefs && msg.emojiRefs.length > 0) {
+        for (var er = 0; er < msg.emojiRefs.length; er++) {
+          var eRef = msg.emojiRefs[er];
+          if (eRef.b64 && eRef.b64.length > 20000) {
+            eRef.b64 = null;
+            modified = true;
+            compressedMsgs++;
+          }
+        }
+      }
+      if (modified) {
+        try { await db.addMessage(msg); } catch (_) {}
+        cleaned++;
+      }
+    }
+
+    // 同步内存中的消息
+    try {
+      var freshMsgs = await db.getRecentMessages(200);
+      state.messages = freshMsgs;
+      if (freshMsgs.length > 0) {
+        state.oldestTimestamp = freshMsgs[0].timestamp;
+      }
+      renderAllMessages();
+    } catch (_) {}
+    await refreshDataStats();
+    btn.disabled = false;
+    if (cleaned === 0) {
+      hintEl.textContent = '数据已是最优状态，无需压缩';
+      showToast('数据已是最优状态', 'success');
+    } else {
+      hintEl.textContent = '已优化 ' + cleaned + ' 项数据';
+      showToast('深度压缩完成，优化了 ' + cleaned + ' 项数据', 'success');
+    }
+  } catch (err) {
+    btn.disabled = false;
+    hintEl.textContent = '压缩失败';
+    showToast('深度压缩失败: ' + err.message, 'error');
+  }
+}
+// ══════════════════════════════════════════════════════
 // 数据管理
 // ══════════════════════════════════════════════════════
 async function clearAllData() {
@@ -7881,7 +8804,20 @@ async function compressData() {
   try {
     const deleted = await db.deleteOldMessages(keepCount);
     state.messages = await db.getRecentMessages(200);
+    if (state.messages.length > 0) {
+      state.oldestTimestamp = state.messages[0].timestamp;
+      var olderCheck = await db.getMessagesBefore(state.oldestTimestamp, 1);
+      state.hasMoreMessages = olderCheck.length > 0;
+    } else {
+      state.oldestTimestamp = Infinity;
+      state.hasMoreMessages = false;
+    }
+    state.pendingMessages = state.pendingMessages.filter(function(m) {
+      return state.messages.some(function(sm) { return sm.id === m.id; });
+    });
     renderAllMessages();
+    updateSendButton();
+    refreshDataStats();
     showToast('已删除 ' + deleted + ' 条旧消息', 'success');
   } catch (err) {
     showToast('压缩失败: ' + err.message, 'error');
@@ -8118,6 +9054,7 @@ async function handleBgUpload(fileInput) {
     const url = await db.getBlobObjectURL('page_bg');
     document.documentElement.style.setProperty('--bg-image', 'url(' + url + ')');
     state.pageSettings.backgroundImage = url;
+    applyPageSettings();
     refreshBgPreview(url);
     showToast('背景已更新', 'success');
   } catch (err) {
@@ -8131,7 +9068,16 @@ async function clearBg() {
     await db.deleteBlob('page_bg');
     document.documentElement.style.setProperty('--bg-image', 'none');
     state.pageSettings.backgroundImage = '';
+    state.pageSettings.bgBlur = 0;
+    document.documentElement.style.setProperty('--bg-display', 'none');
+    document.documentElement.style.setProperty('--bg-blur-display', 'none');
+    document.documentElement.style.setProperty('--bg-blur', '0px');
+    var blurSlider = document.getElementById('page-bg-blur');
+    if (blurSlider) { blurSlider.value = 0; }
+    var blurValEl = document.getElementById('page-bg-blur-val');
+    if (blurValEl) { blurValEl.textContent = '0%'; }
     refreshBgPreview(null);
+    schedulePageSave();
     showToast('背景已清除', 'success');
   } catch (err) {
     showToast('操作失败', 'error');
@@ -8219,6 +9165,7 @@ setSplashProgress(50);
     if (bgURL) {
       document.documentElement.style.setProperty('--bg-image', 'url(' + bgURL + ')');
       state.pageSettings.backgroundImage = bgURL;
+      applyPageSettings();
     }
 setSplashProgress(60);
     // 加载消息（初始只加载50条，滚动时按需加载更多）
@@ -8331,11 +9278,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
   document.getElementById('btn-send').addEventListener('click', handleSendClick);
 
+  var _sendDebounceTimer = null;
+  var _sendDebouncing = false;
   function handleSendClick() {
     if (state.isGenerating) {
       stopGeneration();
       return;
     }
+    if (_sendDebouncing) return;
+    _sendDebouncing = true;
+    if (_sendDebounceTimer) clearTimeout(_sendDebounceTimer);
+    _sendDebounceTimer = setTimeout(function() { _sendDebouncing = false; }, 600);
     const hasText = chatInput.value.trim().length > 0;
     const hasPending = state.pendingMessages.length > 0;
     if (hasText) {
@@ -8693,6 +9646,13 @@ document.addEventListener('DOMContentLoaded', () => {
     handleBgUpload(e.target);
   });
   document.getElementById('btn-bg-clear').addEventListener('click', clearBg);
+  document.getElementById('page-bg-blur').addEventListener('input', function(e) {
+    var val = parseInt(e.target.value);
+    document.getElementById('page-bg-blur-val').textContent = val + '%';
+    state.pageSettings.bgBlur = val;
+    applyPageSettings();
+    schedulePageSave();
+  });
 
   // 气泡颜色
   document.getElementById('color-char-bubble').addEventListener('input', (e) => {
@@ -8719,7 +9679,12 @@ document.addEventListener('DOMContentLoaded', () => {
     schedulePageSave();
     showToast('已恢复默认颜色', 'success');
   });
-
+  // 磨砂效果开关
+  document.getElementById('toggle-frosted').addEventListener('click', function() {
+    var on = !this.classList.contains('on');
+    this.classList.toggle('on', on);
+    applyFrostedEffect(on);
+  });
   // 表情包管理
   document.getElementById('btn-emoji-batch-add').addEventListener('click', batchAddEmojis);
 
@@ -8849,6 +9814,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // 手动AI总结
   document.getElementById('btn-manual-summary').addEventListener('click', manualTriggerSummary);
+  // 数据状态面板刷新
+  document.getElementById('btn-refresh-stats').addEventListener('click', refreshDataStats);
+
+  // 旧数据清理按钮
+  document.querySelectorAll('[data-cleanup-days]').forEach(function(chip) {
+    chip.addEventListener('click', function() {
+      var days = chip.dataset.cleanupDays;
+      if (days === 'custom') {
+        var customRow = document.getElementById('cleanup-custom-row');
+        customRow.style.display = customRow.style.display === 'none' ? '' : 'none';
+      } else {
+        cleanupOldMessages(parseInt(days));
+      }
+    });
+  });
+  document.getElementById('btn-cleanup-custom-go').addEventListener('click', function() {
+    var days = parseInt(document.getElementById('cleanup-custom-days').value);
+    if (isNaN(days) || days < 1) {
+      showToast('请输入有效的天数', 'warning');
+      return;
+    }
+    cleanupOldMessages(days);
+  });
+
+  // 深度压缩
+  document.getElementById('btn-deep-compress').addEventListener('click', deepCompress);
   // 数据管理
   document.getElementById('btn-clear-all').addEventListener('click', clearAllData);
   document.getElementById('btn-compress').addEventListener('click', compressData);
