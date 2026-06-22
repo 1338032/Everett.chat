@@ -5155,7 +5155,7 @@ function buildMessages() {
     // 移除最后一条空的占位消息
     if (apiMessages.length > 0) {
       var lastApiMsg = apiMessages[apiMessages.length - 1];
-      if (lastApiMsg.role === 'user' && (!lastApiMsg.content || lastApiMsg.content.trim() === '')) {
+      if (lastApiMsg.role === 'user' && (!lastApiMsg.content || (typeof lastApiMsg.content === 'string' && lastApiMsg.content.trim() === ''))) {
         apiMessages.pop();
       }
     }
@@ -6832,6 +6832,7 @@ function loadCharModalData() {
   document.getElementById('user-desc-input').value = state.userMeta.description;
   refreshCharAvatarPreview();
   refreshUserAvatarPreview();
+  state.worldBook.sort(function(a, b) { var sa = typeof a.sortOrder === 'number' ? a.sortOrder : 999999; var sb = typeof b.sortOrder === 'number' ? b.sortOrder : 999999; if (sa !== sb) return sa - sb; return (a.createdAt || 0) - (b.createdAt || 0); });
   refreshWorldBookList();
 }
 
@@ -7303,6 +7304,7 @@ async function handleWbSortClick(clickedId, clickedType) {
   try {
     await db.saveWorldBookFolders(state.worldBookFolders);
     for (var wi = 0; wi < state.worldBook.length; wi++) {
+      state.worldBook[wi].sortOrder = wi;
       await db.addWorldBookEntry(state.worldBook[wi]);
     }
   } catch (_) {}
@@ -9645,6 +9647,12 @@ setSplashProgress(75);
     state.longTermMemory = await db.getLongTermMemory();
     state.coreMemory = await db.getCoreMemory();
     state.worldBook = await db.getWorldBook();
+    state.worldBook.sort(function(a, b) {
+      var sa = typeof a.sortOrder === 'number' ? a.sortOrder : 999999;
+      var sb = typeof b.sortOrder === 'number' ? b.sortOrder : 999999;
+      if (sa !== sb) return sa - sb;
+      return (a.createdAt || 0) - (b.createdAt || 0);
+    });
     state.worldBookFolders = await db.getWorldBookFolders();
     state.emojis = await db.getEmojis();
     try { state.favorites = await db.getFavorites(); } catch (_) { state.favorites = []; }
