@@ -471,7 +471,7 @@ a { color:inherit; text-decoration:none; }
 .interrupted-mark {
   font-size:12px; color:var(--text-muted); margin-top:4px; font-style:italic;
 }
-/* 消息操作栏（继写/重回/帮回） */
+/* 消息操作栏（续写/重回/帮回） */
 .msg-action-bar {
   display:flex; align-items:center; gap:2px;
   margin-top:6px;
@@ -1004,6 +1004,26 @@ a { color:inherit; text-decoration:none; }
   width:14px; height:14px; stroke:currentColor; stroke-width:1.5; fill:none; flex-shrink:0;
 }
 .wb-tag-overlay { position:fixed; inset:0; z-index:209; }
+/* 世界书排序模式 */
+.wb-sort-mode .wb-folder { border-color:var(--pine-ring); }
+.wb-sort-mode .wb-folder.open .wb-folder-body { display:block; }
+.wb-sort-item-highlight {
+  outline:2px solid var(--pine);
+  outline-offset:2px;
+  background:var(--pine-pale) !important;
+  border-radius:var(--radius-sm);
+}
+.wb-sort-bar {
+  position:sticky; top:0; z-index:5;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:10px 12px;
+  background:var(--pine-pale);
+  border:1px solid var(--pine);
+  border-radius:var(--radius-sm);
+  margin-bottom:12px;
+  font-size:13px; color:var(--pine);
+}
+.wb-sort-bar .wb-sort-hint { flex:1; }
 /* 记忆条目 */
 .mem-item {
   display:flex; align-items:flex-start; gap:8px;
@@ -1795,7 +1815,12 @@ a { color:inherit; text-decoration:none; }
         <div class="status-item"><span class="status-label">健康</span><span class="status-value" id="sv-health">—</span></div>
       </div>
       <div class="status-thought" id="sv-thought">—</div>
-      <div class="status-update-time" id="sv-update-time"></div>
+      <div style="display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-top:6px">
+        <div class="status-update-time" id="sv-update-time" style="margin-top:0"></div>
+        <button class="btn-icon-sm" id="btn-edit-status" title="编辑状态栏" style="flex-shrink:0">
+          <svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg>
+        </button>
+      </div>
     </div>
   </div>
 
@@ -3101,7 +3126,10 @@ const state = {
   domMaxNodes: 400,
   isLoadingDom: false,
   multiSelectMode: false,
-  selectedMsgIds: new Set()
+  selectedMsgIds: new Set(),
+  wbSortMode: false,
+  wbSortFirstId: null,
+  wbSortFirstType: null
 };
 
 function genId(prefix) {
@@ -3379,7 +3407,7 @@ function renderMessageElement(msg, prevMsg) {
       mark.textContent = '（已中断）';
       content.appendChild(mark);
     }
-    // 操作栏：继写、重回、帮回（仅最新消息显示）
+    // 操作栏：续写、重回、帮回（仅最新消息显示）
     var isLastCharMsg = false;
     for (var _lci = state.messages.length - 1; _lci >= 0; _lci--) {
       if (state.messages[_lci].role === 'assistant' && !state.messages[_lci].isWelcome) {
@@ -3391,10 +3419,10 @@ function renderMessageElement(msg, prevMsg) {
     if (!msg.isWelcome && isLastCharMsg && isLastMsgOverall) {
       var actionBar = document.createElement('div');
       actionBar.className = 'msg-action-bar';
-      // 继写
+      // 续写
       var btnContinue = document.createElement('button');
       btnContinue.className = 'msg-act-btn';
-      btnContinue.title = '继写';
+      btnContinue.title = '续写';
       btnContinue.dataset.actType = 'continue';
       btnContinue.dataset.actMsgId = msg.id;
       btnContinue.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>';
@@ -3453,7 +3481,7 @@ function renderMessageElement(msg, prevMsg) {
       block.innerHTML = getUserAvatarHTML() + '<div class="user-content"><div class="user-bubble">' + renderUserBubbleContent(msg) + '</div></div>';
     }
   }
-// User 操作栏：继写、帮回（仅最新消息显示）
+// User 操作栏：续写、帮回（仅最新消息显示）
   var isLastUserMsg = false;
   for (var _lui = state.messages.length - 1; _lui >= 0; _lui--) {
     if (state.messages[_lui].role === 'user' && !state.messages[_lui].isWelcome) {
@@ -3468,10 +3496,10 @@ function renderMessageElement(msg, prevMsg) {
       var uActionBar = document.createElement('div');
       uActionBar.className = 'msg-action-bar';
       uActionBar.style.justifyContent = 'flex-end';
-      // 继写
+      // 续写
       var uBtnContinue = document.createElement('button');
       uBtnContinue.className = 'msg-act-btn';
-      uBtnContinue.title = '继写';
+      uBtnContinue.title = '续写';
       uBtnContinue.dataset.actType = 'continue';
       uBtnContinue.dataset.actMsgId = msg.id;
       uBtnContinue.innerHTML = '<svg viewBox="0 0 24 24"><path d="M5 12h14"/><path d="M12 5l7 7-7 7"/></svg>';
@@ -3500,7 +3528,7 @@ function renderMessageElement(msg, prevMsg) {
   return block;
 }
 
-function renderAllMessages() {
+function renderAllMessages(skipScroll) {
   var inner = document.getElementById('chat-inner');
   inner.innerHTML = '';
 
@@ -3542,7 +3570,7 @@ function renderAllMessages() {
     inner.appendChild(bottomSentinel);
   }
 
-  scrollToBottom();
+  if (!skipScroll) scrollToBottom();
 }
 
 function appendMessageElement(msg) {
@@ -3562,17 +3590,26 @@ function appendMessageElement(msg) {
 
 async function loadMoreMessages() {
   try {
+    var chatArea = document.getElementById('chat-area');
+    var oldScrollHeight = chatArea.scrollHeight;
+    var oldScrollTop = chatArea.scrollTop;
+
     var older = await db.getMessagesBefore(state.oldestTimestamp, 50);
     if (older.length === 0) {
       state.hasMoreMessages = false;
-      const loadBtn = document.querySelector('.load-more-btn');
+      var loadBtn = document.querySelector('.load-more-btn');
       if (loadBtn) loadBtn.remove();
       return;
     }
     state.messages = [...older, ...state.messages];
     state.oldestTimestamp = older[0].timestamp;
     state.hasMoreMessages = older.length >= 50;
-    renderAllMessages();
+    renderAllMessages(true);
+
+    requestAnimationFrame(function() {
+      var newScrollHeight = chatArea.scrollHeight;
+      chatArea.scrollTop = oldScrollTop + (newScrollHeight - oldScrollHeight);
+    });
   } catch (err) {
     showToast('加载更多消息失败: ' + err.message, 'error');
   }
@@ -3772,7 +3809,54 @@ function updateChatPadding() {
   const barHeight = hasStatus ? 22 : 0;
   document.documentElement.style.setProperty('--statusbar-height', barHeight + 'px');
 }
-
+async function editStatusBar() {
+  var currentStatus = state.lastStatus || {};
+  var fields = ['时间', '地点', '天气', '衣着', '动作', '心情', '健康', '思绪'];
+  var lines = [];
+  for (var i = 0; i < fields.length; i++) {
+    var key = fields[i];
+    var val = currentStatus[key] || '';
+    lines.push(key + '：' + val);
+  }
+  var text = lines.join('\n');
+  var result = await showPrompt('编辑状态栏', text, {
+    multiline: true,
+    placeholder: '每行一个字段，格式：字段名：内容\n例如：\n时间：2024/12/01 14:30\n地点：咖啡馆',
+    description: '修改后将立即生效，格式为"字段名：内容"，每行一个'
+  });
+  if (result === null) return;
+  var newStatus = {};
+  var resultLines = result.split('\n');
+  for (var j = 0; j < resultLines.length; j++) {
+    var line = resultLines[j].trim();
+    if (!line) continue;
+    var sepIdx = line.indexOf('：');
+    if (sepIdx === -1) sepIdx = line.indexOf(':');
+    if (sepIdx === -1) continue;
+    var key2 = line.slice(0, sepIdx).trim();
+    var val2 = line.slice(sepIdx + 1).trim();
+    if (key2 && val2) newStatus[key2] = val2;
+  }
+  if (Object.keys(newStatus).length === 0) {
+    showToast('未解析到有效内容', 'warning');
+    return;
+  }
+  updateStatusBar(newStatus);
+  var lastAssistantMsg = null;
+  for (var k = state.messages.length - 1; k >= 0; k--) {
+    if (state.messages[k].role === 'assistant' && !state.messages[k].isWelcome) {
+      lastAssistantMsg = state.messages[k];
+      break;
+    }
+  }
+  if (lastAssistantMsg) {
+    lastAssistantMsg.status = newStatus;
+    try {
+      await db.updateMessage(lastAssistantMsg.id, { status: newStatus });
+    } catch (_) {}
+  }
+  showToast('状态栏已更新', 'success');
+}
 function toggleStatusDrawer() {
   state.statusDrawerOpen = !state.statusDrawerOpen;
   const drawer = document.getElementById('status-drawer');
@@ -5447,7 +5531,7 @@ async function rollbackFromMessage(msgId) {
   showToast('已回溯 ' + countToDelete + ' 条消息', 'success');
 }
 
-// ── 继写：复用 receiveReply，通过标记注入续写指令 ──
+// ── 续写：复用 receiveReply，通过标记注入续写指令 ──
 async function continueWriting(msgId) {
   if (state.isGenerating) { showToast('正在生成中', 'warning'); return; }
   if (!state.apiSettings.apiKey) { showToast('请先在设置中填写 API 密钥', 'warning'); return; }
@@ -5783,8 +5867,6 @@ function refreshWorldBookList() {
   var folders = state.worldBookFolders;
   var allEntries = state.worldBook;
 
-  // 分类：有文件夹的条目 和 单独条目
-  var folderIds = new Set(folders.map(function(f) { return f.id; }));
   var assignedIds = new Set();
   for (var fi = 0; fi < folders.length; fi++) {
     var items = folders[fi].items || [];
@@ -5803,7 +5885,13 @@ function refreshWorldBookList() {
 
   var html = '';
 
-  // 渲染文件夹
+  if (state.wbSortMode) {
+    html += '<div class="wb-sort-bar">';
+    html += '<span class="wb-sort-hint" id="wb-sort-hint">点击任意条目或文件夹选中，再点击另一项交换位置</span>';
+    html += '<button class="btn-secondary" id="wb-sort-done" style="flex-shrink:0;font-size:12px;padding:4px 12px">完成</button>';
+    html += '</div>';
+  }
+
   for (var fIdx = 0; fIdx < folders.length; fIdx++) {
     var folder = folders[fIdx];
     var folderItems = (folder.items || []).map(function(itemId) {
@@ -5811,18 +5899,21 @@ function refreshWorldBookList() {
     }).filter(Boolean);
     var folderAllEnabled = folder.allEnabled || false;
     var itemCount = folderItems.length;
+    var forceOpen = state.wbSortMode ? ' open' : '';
 
-    html += '<div class="wb-folder" data-folder-id="' + folder.id + '">';
-    html += '<div class="wb-folder-header" data-folder-toggle="' + folder.id + '">';
+    html += '<div class="wb-folder' + forceOpen + '" data-folder-id="' + folder.id + '" data-wb-sort-id="' + folder.id + '">';
+    html += '<div class="wb-folder-header" data-folder-toggle="' + folder.id + '"' + (state.wbSortMode ? ' data-wb-sort-click="' + folder.id + '" data-wb-sort-type="folder"' : '') + '>';
     html += '<svg class="wb-folder-chevron" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';
     html += '<svg class="wb-folder-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
     html += '<span class="wb-folder-name">' + escapeHtml(folder.name || '未命名文件夹') + '</span>';
     html += '<span class="wb-folder-count">' + itemCount + '</span>';
-    html += '<div class="wb-folder-actions" onclick="event.stopPropagation()">';
-    html += '<div class="toggle ' + (folderAllEnabled ? 'on' : '') + '" data-folder-all="' + folder.id + '" title="全部启用" style="transform:scale(0.85)"></div>';
-    html += '<button class="btn-icon-sm" data-folder-rename="' + folder.id + '" title="重命名"><svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>';
-    html += '<button class="btn-icon-sm" data-folder-del="' + folder.id + '" title="删除文件夹"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>';
-    html += '</div>';
+    if (!state.wbSortMode) {
+      html += '<div class="wb-folder-actions" onclick="event.stopPropagation()">';
+      html += '<div class="toggle ' + (folderAllEnabled ? 'on' : '') + '" data-folder-all="' + folder.id + '" title="全部启用" style="transform:scale(0.85)"></div>';
+      html += '<button class="btn-icon-sm" data-folder-rename="' + folder.id + '" title="重命名"><svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>';
+      html += '<button class="btn-icon-sm" data-folder-del="' + folder.id + '" title="删除文件夹"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>';
+      html += '</div>';
+    }
     html += '</div>';
     html += '<div class="wb-folder-body">';
 
@@ -5839,19 +5930,49 @@ function refreshWorldBookList() {
     html += '</div></div>';
   }
 
-  // 渲染单独条目
   for (var si = 0; si < standaloneEntries.length; si++) {
     html += buildWbItemHTML(standaloneEntries[si], standaloneEntries[si].enabled, false);
   }
 
   listEl.innerHTML = html;
-  bindWorldBookEvents(listEl);
+
+  if (state.wbSortMode) {
+    listEl.classList.add('wb-sort-mode');
+    var doneBtn = document.getElementById('wb-sort-done');
+    if (doneBtn) doneBtn.addEventListener('click', exitWbSortMode);
+    listEl.querySelectorAll('[data-wb-sort-click]').forEach(function(el) {
+      el.addEventListener('click', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var sortId = el.dataset.wbSortClick;
+        var sortType = el.dataset.wbSortType;
+        handleWbSortClick(sortId, sortType);
+      });
+    });
+    if (state.wbSortFirstId) {
+      var highlighted = listEl.querySelector('[data-wb-sort-id="' + state.wbSortFirstId + '"]');
+      if (highlighted) highlighted.classList.add('wb-sort-item-highlight');
+    }
+  } else {
+    listEl.classList.remove('wb-sort-mode');
+    bindWorldBookEvents(listEl);
+  }
 }
 
 function buildWbItemHTML(wb, effectiveEnabled, disableToggle) {
   var toggleClass = effectiveEnabled ? 'on' : '';
   var toggleStyle = disableToggle ? 'opacity:0.5;pointer-events:none;' : '';
-  return '<div class="wb-item" data-wb-id="' + wb.id + '">' +
+  var sortAttr = state.wbSortMode ? ' data-wb-sort-click="' + wb.id + '" data-wb-sort-type="entry"' : '';
+  var sortIdAttr = ' data-wb-sort-id="' + wb.id + '"';
+  var sortCursor = state.wbSortMode ? ' style="cursor:pointer"' : '';
+
+  if (state.wbSortMode) {
+    return '<div class="wb-item" data-wb-id="' + wb.id + '"' + sortIdAttr + sortAttr + sortCursor + '>' +
+      '<span class="wb-title" style="flex:1">' + escapeHtml(wb.title || '未命名条目') + '</span>' +
+      '</div>';
+  }
+
+  return '<div class="wb-item" data-wb-id="' + wb.id + '"' + sortIdAttr + '>' +
     '<div class="toggle ' + toggleClass + '" data-wb-toggle="' + wb.id + '" style="transform:scale(0.85);' + toggleStyle + '"></div>' +
     '<span class="wb-title">' + escapeHtml(wb.title || '未命名条目') + '</span>' +
     '<button class="btn-icon-sm" data-wb-tag="' + wb.id + '" title="移入文件夹"><svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></button>' +
@@ -6081,7 +6202,161 @@ function showWbTagMenu(wbId, x, y) {
     })(menuItems[mi]);
   }
 }
+function enterWbSortMode() {
+  state.wbSortMode = true;
+  state.wbSortFirstId = null;
+  state.wbSortFirstType = null;
+  refreshWorldBookList();
+}
 
+function exitWbSortMode() {
+  state.wbSortMode = false;
+  state.wbSortFirstId = null;
+  state.wbSortFirstType = null;
+  refreshWorldBookList();
+}
+
+async function handleWbSortClick(clickedId, clickedType) {
+  if (!state.wbSortFirstId) {
+    state.wbSortFirstId = clickedId;
+    state.wbSortFirstType = clickedType;
+    var el = document.querySelector('[data-wb-sort-id="' + clickedId + '"]');
+    if (el) el.classList.add('wb-sort-item-highlight');
+    var hintEl = document.getElementById('wb-sort-hint');
+    if (hintEl) hintEl.textContent = '已选中第一项，再点击另一项完成交换';
+    return;
+  }
+  if (state.wbSortFirstId === clickedId) {
+    state.wbSortFirstId = null;
+    state.wbSortFirstType = null;
+    var el2 = document.querySelector('.wb-sort-item-highlight');
+    if (el2) el2.classList.remove('wb-sort-item-highlight');
+    var hintEl2 = document.getElementById('wb-sort-hint');
+    if (hintEl2) hintEl2.textContent = '点击任意条目或文件夹选中，再点击另一项交换位置';
+    return;
+  }
+  var firstId = state.wbSortFirstId;
+  var firstType = state.wbSortFirstType;
+  var secondId = clickedId;
+  var secondType = clickedType;
+
+  var allItems = buildWbFlatOrder();
+  var idx1 = allItems.findIndex(function(it) { return it.id === firstId; });
+  var idx2 = allItems.findIndex(function(it) { return it.id === secondId; });
+  if (idx1 === -1 || idx2 === -1) {
+    showToast('找不到选中的条目', 'warning');
+    state.wbSortFirstId = null;
+    state.wbSortFirstType = null;
+    refreshWorldBookList();
+    return;
+  }
+  var temp = allItems[idx1];
+  allItems[idx1] = allItems[idx2];
+  allItems[idx2] = temp;
+  applyWbFlatOrder(allItems);
+  try {
+    await db.saveWorldBookFolders(state.worldBookFolders);
+    for (var wi = 0; wi < state.worldBook.length; wi++) {
+      await db.addWorldBookEntry(state.worldBook[wi]);
+    }
+  } catch (_) {}
+  state.wbSortFirstId = null;
+  state.wbSortFirstType = null;
+  refreshWorldBookList();
+  showToast('已交换位置', 'success');
+}
+
+function buildWbFlatOrder() {
+  var result = [];
+  var folders = state.worldBookFolders;
+  var allEntries = state.worldBook;
+  var assignedIds = new Set();
+  for (var fi = 0; fi < folders.length; fi++) {
+    var items = folders[fi].items || [];
+    for (var ii = 0; ii < items.length; ii++) {
+      assignedIds.add(items[ii]);
+    }
+  }
+  var standaloneEntries = allEntries.filter(function(e) { return !assignedIds.has(e.id); });
+  var topLevel = [];
+  var folderMap = {};
+  for (var fi2 = 0; fi2 < folders.length; fi2++) {
+    folderMap[folders[fi2].id] = folders[fi2];
+  }
+  var folderOrder = folders.map(function(f) { return { type: 'folder', id: f.id }; });
+  var standaloneOrder = standaloneEntries.map(function(e) { return { type: 'entry', id: e.id }; });
+  topLevel = folderOrder.concat(standaloneOrder);
+  for (var ti = 0; ti < topLevel.length; ti++) {
+    var item = topLevel[ti];
+    if (item.type === 'folder') {
+      result.push({ id: item.id, type: 'folder' });
+      var folder = folderMap[item.id];
+      var fItems = (folder.items || []);
+      for (var ki = 0; ki < fItems.length; ki++) {
+        var entry = allEntries.find(function(e) { return e.id === fItems[ki]; });
+        if (entry) result.push({ id: entry.id, type: 'entry-in-folder', folderId: item.id });
+      }
+    } else {
+      result.push({ id: item.id, type: 'entry' });
+    }
+  }
+  return result;
+}
+
+function applyWbFlatOrder(flatList) {
+  var newFolderOrder = [];
+  var newFolderItems = {};
+  var newStandaloneOrder = [];
+  var folderMap = {};
+  for (var fi = 0; fi < state.worldBookFolders.length; fi++) {
+    folderMap[state.worldBookFolders[fi].id] = state.worldBookFolders[fi];
+  }
+  var entryMap = {};
+  for (var ei = 0; ei < state.worldBook.length; ei++) {
+    entryMap[state.worldBook[ei].id] = state.worldBook[ei];
+  }
+  for (var i = 0; i < flatList.length; i++) {
+    var item = flatList[i];
+    if (item.type === 'folder') {
+      var folder = folderMap[item.id];
+      if (folder) {
+        newFolderOrder.push(folder);
+        newFolderItems[item.id] = [];
+      }
+    } else if (item.type === 'entry-in-folder') {
+      if (newFolderItems[item.folderId]) {
+        newFolderItems[item.folderId].push(item.id);
+      }
+    } else if (item.type === 'entry') {
+      newStandaloneOrder.push(item.id);
+    }
+  }
+  for (var fi2 = 0; fi2 < newFolderOrder.length; fi2++) {
+    var fId = newFolderOrder[fi2].id;
+    if (newFolderItems[fId]) {
+      newFolderOrder[fi2].items = newFolderItems[fId];
+    }
+  }
+  state.worldBookFolders = newFolderOrder;
+  var reorderedEntries = [];
+  var addedIds = new Set();
+  for (var j = 0; j < flatList.length; j++) {
+    var it = flatList[j];
+    if (it.type !== 'folder') {
+      var entry = entryMap[it.id];
+      if (entry && !addedIds.has(it.id)) {
+        reorderedEntries.push(entry);
+        addedIds.add(it.id);
+      }
+    }
+  }
+  for (var k = 0; k < state.worldBook.length; k++) {
+    if (!addedIds.has(state.worldBook[k].id)) {
+      reorderedEntries.push(state.worldBook[k]);
+    }
+  }
+  state.worldBook = reorderedEntries;
+}
 function closeWbTagMenu() {
   var overlay = document.getElementById('wb-tag-overlay');
   var menu = document.getElementById('wb-tag-menu');
@@ -7055,15 +7330,26 @@ function refreshLTMemList() {
     });
   });
 }
-function refreshMemorySummaryInfo() {
+async function refreshMemorySummaryInfo() {
   var sinceEl = document.getElementById('mem-since-summary');
   var lastTimeEl = document.getElementById('mem-last-summary-time');
   var ltCountEl = document.getElementById('mem-lt-count');
   var coreCountEl = document.getElementById('mem-core-count');
   if (!sinceEl) return;
 
-  var nonWelcome = state.messages.filter(function(m) { return !m.isWelcome && !m.pending && m.role === 'assistant'; });
-  var totalAssistantTurns = nonWelcome.length;
+  var totalAssistantTurns = 0;
+  try {
+    var allMsgs = await db.getAllMessages();
+    for (var i = 0; i < allMsgs.length; i++) {
+      if (!allMsgs[i].isWelcome && !allMsgs[i].pending && allMsgs[i].role === 'assistant') {
+        totalAssistantTurns++;
+      }
+    }
+  } catch (_) {
+    var nonWelcome = state.messages.filter(function(m) { return !m.isWelcome && !m.pending && m.role === 'assistant'; });
+    totalAssistantTurns = nonWelcome.length;
+  }
+
   var lastSummaryTurn = state.memorySettings._lastSummaryTurn || 0;
   var sinceLast = Math.max(0, totalAssistantTurns - lastSummaryTurn);
   sinceEl.textContent = sinceLast + ' 轮对话';
@@ -7082,6 +7368,7 @@ function refreshMemorySummaryInfo() {
   if (hintEl) {
     if (sinceLast < 3) {
       hintEl.textContent = '对话轮数较少，建议积累更多再总结';
+      hintEl.style.color = '';
     } else if (sinceLast >= 10) {
       hintEl.textContent = '已积累较多对话，建议总结';
       hintEl.style.color = 'var(--pine)';
@@ -7093,9 +7380,20 @@ function refreshMemorySummaryInfo() {
 }
 
 async function manualTriggerSummary() {
-  var nonWelcome = state.messages.filter(function(m) { return !m.isWelcome && !m.pending && m.role === 'assistant'; });
+  var totalAssistantForManual = 0;
+  try {
+    var allMsgsForManual = await db.getAllMessages();
+    for (var mi = 0; mi < allMsgsForManual.length; mi++) {
+      if (!allMsgsForManual[mi].isWelcome && !allMsgsForManual[mi].pending && allMsgsForManual[mi].role === 'assistant') {
+        totalAssistantForManual++;
+      }
+    }
+  } catch (_) {
+    var nonWelcomeManual = state.messages.filter(function(m) { return !m.isWelcome && !m.pending && m.role === 'assistant'; });
+    totalAssistantForManual = nonWelcomeManual.length;
+  }
   var lastSummaryTurn = state.memorySettings._lastSummaryTurn || 0;
-  var sinceLast = nonWelcome.length - lastSummaryTurn;
+  var sinceLast = totalAssistantForManual - lastSummaryTurn;
   if (sinceLast < 2) {
     showToast('对话轮数太少，至少需要2轮新对话才能总结', 'warning');
     return;
@@ -7110,8 +7408,7 @@ async function manualTriggerSummary() {
   btn.innerHTML = '<span>正在总结...</span>';
   try {
     await triggerMemorySummary();
-    var assistantCount = state.messages.filter(function(m) { return !m.isWelcome && !m.pending && m.role === 'assistant'; }).length;
-    state.memorySettings._lastSummaryTurn = assistantCount;
+    state.memorySettings._lastSummaryTurn = totalAssistantForManual;
     state.memorySettings._lastSummaryTime = Date.now();
     await db.setSetting('settings_memory', state.memorySettings);
     refreshMemorySummaryInfo();
@@ -8017,6 +8314,8 @@ document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('btn-char-modal').addEventListener('click', openCharModal);
 // 状态栏下拉
   document.getElementById('status-toggle-btn').addEventListener('click', toggleStatusDrawer);
+  // 状态栏编辑按钮
+  document.getElementById('btn-edit-status').addEventListener('click', editStatusBar);
   // 输入区
   const chatInput = document.getElementById('chat-input');
   chatInput.addEventListener('input', () => {
@@ -8185,6 +8484,35 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 世界书
+  // 世界书长按排序
+  (function initWbSortLongPress() {
+    var wbList = document.getElementById('wb-list');
+    var wbLongPressTimer = null;
+    var wbLongPressTriggered = false;
+    wbList.addEventListener('pointerdown', function(e) {
+      if (state.wbSortMode) return;
+      var wbItem = e.target.closest('.wb-item');
+      var wbFolder = e.target.closest('.wb-folder-header');
+      if (!wbItem && !wbFolder) return;
+      if (e.target.closest('.toggle') || e.target.closest('.btn-icon-sm') || e.target.closest('.wb-folder-actions')) return;
+      wbLongPressTriggered = false;
+      wbLongPressTimer = setTimeout(function() {
+        wbLongPressTriggered = true;
+        enterWbSortMode();
+      }, 600);
+    });
+    wbList.addEventListener('pointerup', function() {
+      if (wbLongPressTimer) { clearTimeout(wbLongPressTimer); wbLongPressTimer = null; }
+    });
+    wbList.addEventListener('pointermove', function(e) {
+      if (wbLongPressTimer && (Math.abs(e.movementX) > 5 || Math.abs(e.movementY) > 5)) {
+        clearTimeout(wbLongPressTimer); wbLongPressTimer = null;
+      }
+    });
+    wbList.addEventListener('pointercancel', function() {
+      if (wbLongPressTimer) { clearTimeout(wbLongPressTimer); wbLongPressTimer = null; }
+    });
+  })();
   document.getElementById('btn-add-wb').addEventListener('click', () => {
     openWorldBookEditor(null);
   });
