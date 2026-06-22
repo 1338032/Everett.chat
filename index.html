@@ -5807,7 +5807,152 @@ async function triggerMemorySummary() {
     console.error('记忆总结请求失败:', err);
   }
 }
+async function triggerMemorySummaryWithTurns(turnsToSummarize) {
+  var charName = getCharName();
+  var userName = getUserName();
+  var apiSettings = state.apiSettings;
+  if (!apiSettings.apiKey) return false;
 
+  var nonWelcome = state.messages.filter(function(m) { return !m.isWelcome && !m.pending; });
+
+  // 如果内存中消息不够，从数据库加载全量
+  var allNonWelcome = nonWelcome;
+  try {
+    var allMsgsFromDb = await db.getAllMessages();
+    allNonWelcome = allMsgsFromDb.filter(function(m) { return !m.isWelcome && !m.pending; });
+  } catch (_) {
+    allNonWelcome = nonWelcome;
+  }
+
+  var sliceCount = turnsToSummarize * 2;
+  var toSummarize = allNonWelcome.slice(-sliceCount);
+
+  if (toSummarize.length === 0) return false;
+
+  var dialogText = '';
+  for (var i = 0; i < toSummarize.length; i++) {
+    var m = toSummarize[i];
+    if (m.role === 'user') {
+      var memUserText = (m.userText || m.rawText || '');
+      memUserText = memUserText.replace(/\[emo:([^\]]+)\]/g, '（发了表情包：$1）');
+      memUserText = memUserText.replace(/\[图片:[^\]]*\]/g, '（发了一张图片）');
+      if (m.isEmojiOnly) memUserText = '（发送了表情包）';
+      if (m.isImageOnly) memUserText = '（发送了图片）';
+      dialogText += userName + '：' + memUserText + '\n';
+    } else {
+      var body = (m.rawText || '').replace(/\[\[STATUS\]\][\s\S]*?\[\[\/STATUS\]\]/, '').trim();
+      dialogText += charName + '：' + body + '\n';
+      if (m.status) {
+        var statusParts = [];
+        if (m.status['地点']) statusParts.push('地点：' + m.status['地点']);
+        if (m.status['心情']) statusParts.push('心情：' + m.status['心情']);
+        if (m.status['动作']) statusParts.push('动作：' + m.status['动作']);
+        if (m.status['思绪']) statusParts.push('思绪：' + m.status['思绪']);
+        if (m.status['健康']) statusParts.push('健康：' + m.status['健康']);
+        if (m.status['衣着']) statusParts.push('衣着：' + m.status['衣着']);
+        if (statusParts.length > 0) {
+          dialogText += '  [当时状态] ' + statusParts.join('｜') + '\n';
+        }
+      }
+    }
+  }
+
+  var systemPrompt = '';
+
+  if (state.charMeta.description) {
+    systemPrompt += '【角色设定】\n' + state.charMeta.description + '\n\n';
+  }
+  if (state.coreMemory.length > 0) {
+    systemPrompt += '【核心记忆 · 绝不遗忘】\n' + state.coreMemory.map(function(e) { return '- ' + e.content; }).join('\n') + '\n\n';
+  }
+  if (state.userMeta.description) {
+    systemPrompt += '【关于 ' + userName + '】\n' + state.userMeta.description + '\n\n';
+  }
+
+  systemPrompt += '【长期记忆总结任务】\n\n';
+  systemPrompt += '请以 ' + charName + ' 的第一人称视角（使用"我"），将下方对话内容总结为一条新的记忆条目。\n\n';
+  systemPrompt += '格式要求：\n';
+  systemPrompt += '1. 直接输出总结文本，不加任何标题、编号、前缀或说明\n';
+  systemPrompt += '2. 使用第一人称"我"书写，视角始终是 ' + charName + '\n';
+  systemPrompt += '3. 涵盖：本轮对话中的重要事件、' + userName + ' 的言行与状态变化、双方互动与情感流动、' + charName + ' 的内心想法与决定\n';
+  systemPrompt += '4. 对话中标注了[当时状态]信息，请参考其中的地点、心情、思绪等来丰富记忆，但不要逐条罗列状态，而是自然融入叙述中\n';
+  systemPrompt += '5. 不需要频繁提及具体时间，除非时间本身是重要信息（如约定、纪念日等）\n';
+  systemPrompt += '6. 语言简练自然，控制在 100～200 字\n';
+  systemPrompt += '7. 这是一条独立的新记忆条目，不需要与以前的记忆合并或承接\n';
+  systemPrompt += '8. 对话中出现的"（发送了表情包）"或"（发送了图片）"只需简要提及情绪互动即可，不必详细描述表情包或图片本身\n';
+
+  if (state.memorySettings.coreMemoryEnabled) {
+    systemPrompt += '\n【核心记忆提取任务】\n\n';
+    systemPrompt += '在完成长期记忆总结之后，请检查本轮对话中是否出现了以下类型的关键信息：\n';
+    systemPrompt += '- 重要承诺或约定\n';
+    systemPrompt += '- 关键身份信息（生日、职业、家庭关系等）\n';
+    systemPrompt += '- 重大情感转折或关系变化\n';
+    systemPrompt += '- 不可逆的重要事件\n\n';
+    systemPrompt += '如果有，请在总结文本之后空一行，写上"[[CORE]]"标记，然后每行一条核心记忆，格式为简短陈述句（10～30字）。\n';
+    systemPrompt += '如果没有值得提取的核心记忆，则不要写"[[CORE]]"标记，只输出长期记忆总结即可。\n\n';
+    systemPrompt += '示例输出格式（有核心记忆时）：\n';
+    systemPrompt += '今天和' + userName + '聊了很多关于……的事情，我感到……\n\n';
+    systemPrompt += '[[CORE]]\n';
+    systemPrompt += userName + '的生日是3月15日\n';
+    systemPrompt += userName + '答应下周一起去看展\n\n';
+    systemPrompt += '示例输出格式（无核心记忆时）：\n';
+    systemPrompt += '今天和' + userName + '随意聊了些日常琐事，气氛轻松……\n';
+  }
+
+  try {
+    var memFormat = apiSettings.format || 'openai';
+    var memUrl = getApiEndpoint(apiSettings.baseUrl, memFormat, 'chat');
+    var memHeaders = getApiHeaders(apiSettings.apiKey, memFormat);
+    var memMessages = [
+      { role: 'system', content: systemPrompt },
+      { role: 'user', content: '以下是需要总结的对话内容（最近 ' + turnsToSummarize + ' 轮）：\n\n' + dialogText }
+    ];
+    var memBody = buildApiRequestBody(memFormat, apiSettings.model, memMessages, {
+      maxTokens: 800, temperature: 0.5, stream: false
+    });
+
+    var response = await fetch(memUrl, {
+      method: 'POST',
+      headers: memHeaders,
+      body: JSON.stringify(memBody)
+    });
+
+    if (!response.ok) return false;
+    var data = await response.json();
+    var content = '';
+    if (data.choices && data.choices[0] && data.choices[0].message) {
+      content = data.choices[0].message.content;
+    } else if (data.content && data.content[0]) {
+      content = data.content[0].text || '';
+    }
+    if (!content) return false;
+
+    var summary = content;
+    var coreLines = [];
+    var coreMarkerIdx = content.indexOf('[[CORE]]');
+
+    if (coreMarkerIdx !== -1 && state.memorySettings.coreMemoryEnabled) {
+      summary = content.slice(0, coreMarkerIdx).trim();
+      var coreSection = content.slice(coreMarkerIdx + '[[CORE]]'.length).trim();
+      var rawCoreLines = coreSection.split('\n');
+      for (var ci = 0; ci < rawCoreLines.length; ci++) {
+        var trimmedCore = rawCoreLines[ci].replace(/^[-·•]\s*/, '').trim();
+        if (trimmedCore) {
+          coreLines.push(trimmedCore);
+        }
+      }
+    }
+
+    if (!summary) return false;
+
+    var confirmed = await showMemorySummaryConfirm(summary, coreLines, toSummarize);
+    return confirmed;
+
+  } catch (err) {
+    console.error('记忆总结请求失败:', err);
+    return false;
+  }
+}
 function showMemorySummaryConfirm(summary, coreLines, coveredMessages) {
   return new Promise(function(resolve) {
     var modal = document.getElementById('prompt-modal');
@@ -8327,14 +8472,18 @@ async function refreshMemorySummaryInfo() {
 
   var hintEl = document.getElementById('mem-manual-hint');
   if (hintEl) {
-    if (sinceLast < 3) {
-      hintEl.textContent = '对话轮数较少，建议积累更多再总结';
+    var triggerTurns = state.memorySettings.summaryTriggerTurns || 10;
+    if (sinceLast < 2) {
+      hintEl.textContent = '对话轮数不足，至少需要2轮';
+      hintEl.style.color = 'var(--text-muted)';
+    } else if (sinceLast < 10) {
+      hintEl.textContent = '可总结 ' + sinceLast + ' 轮（较少，建议积累更多）';
       hintEl.style.color = '';
-    } else if (sinceLast >= 10) {
-      hintEl.textContent = '已积累较多对话，建议总结';
+    } else if (sinceLast >= triggerTurns) {
+      hintEl.textContent = '已积累 ' + sinceLast + ' 轮，建议总结';
       hintEl.style.color = 'var(--pine)';
     } else {
-      hintEl.textContent = '';
+      hintEl.textContent = '可总结 ' + sinceLast + ' 轮';
       hintEl.style.color = '';
     }
   }
@@ -8363,14 +8512,44 @@ async function manualTriggerSummary() {
     showToast('请先在设置中填写 API 密钥', 'warning');
     return;
   }
+
+  // 如果可总结轮数少于10轮，弹窗提醒并允许自定义范围
+  var customTurns = sinceLast;
+  if (sinceLast < 10) {
+    var inputVal = await showPrompt(
+      '可总结轮数较少（' + sinceLast + ' 轮）',
+      String(sinceLast),
+      {
+        placeholder: '输入要总结的轮数',
+        description: '当前距上次总结仅 ' + sinceLast + ' 轮对话，轮数较少时总结内容可能不够丰富。\n\n你可以：\n· 直接确认，总结这 ' + sinceLast + ' 轮\n· 输入更小的数字，只总结最近几轮\n· 取消，等积累更多对话后再总结'
+      }
+    );
+    if (inputVal === null) return;
+    var parsed = parseInt(inputVal);
+    if (isNaN(parsed) || parsed < 1) {
+      showToast('请输入有效的轮数', 'warning');
+      return;
+    }
+    if (parsed > sinceLast) {
+      parsed = sinceLast;
+      showToast('已自动调整为最大可用轮数 ' + sinceLast, 'warning');
+    }
+    customTurns = parsed;
+  } else {
+    // 10轮以上也支持自定义，但不强制弹窗
+    // 直接使用全部可用轮数
+    customTurns = sinceLast;
+  }
+
   var btn = document.getElementById('btn-manual-summary');
   var originalText = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = '<span>正在总结...</span>';
   try {
-    var confirmed = await triggerMemorySummary();
+    var confirmed = await triggerMemorySummaryWithTurns(customTurns);
     if (confirmed === true) {
-      state.memorySettings._lastSummaryTurn = totalAssistantForManual;
+      // 只将实际总结的轮数计入已总结
+      state.memorySettings._lastSummaryTurn = lastSummaryTurn + customTurns;
       state.memorySettings._lastSummaryTime = Date.now();
       await db.setSetting('settings_memory', state.memorySettings);
       refreshMemorySummaryInfo();
@@ -8378,7 +8557,6 @@ async function manualTriggerSummary() {
       refreshCoreMemList();
       showToast('记忆总结已写入', 'success');
     } else {
-      // 用户废弃，不更新轮数
       refreshMemorySummaryInfo();
     }
   } catch (err) {
@@ -8389,9 +8567,8 @@ async function manualTriggerSummary() {
   }
 }
 function refreshShortTermInfo() {
-  const nonWelcome = state.messages.filter(m => !m.isWelcome && !m.pending);
-  const assistantCount = nonWelcome.filter(m => m.role === 'assistant').length;
-  document.getElementById('short-term-info').textContent = '当前窗口：最近 ' + Math.min(assistantCount, state.memorySettings.shortTermTurns) + ' 轮对话';
+  var shortTurns = state.memorySettings.shortTermTurns;
+  document.getElementById('short-term-info').textContent = '当前窗口：最近 ' + shortTurns + ' 轮对话（每轮 = 一问一答）';
 }
 
 // ══════════════════════════════════════════════════════
@@ -9452,8 +9629,7 @@ setSplashProgress(50);
       applyPageSettings();
     }
 setSplashProgress(60);
-    // 加载消息（初始只加载50条，滚动时按需加载更多）
-    var initLoadCount = 50;
+    var initLoadCount = Math.max(200, state.memorySettings.shortTermTurns * 3);;
     var messages = await db.getRecentMessages(initLoadCount);
     state.messages = messages;
     if (messages.length > 0) {
@@ -10039,18 +10215,27 @@ document.addEventListener('DOMContentLoaded', () => {
   });
 
   // 查看短期记忆
-  document.getElementById('btn-view-short').addEventListener('click', () => {
+  document.getElementById('btn-view-short').addEventListener('click', async () => {
     const preview = document.getElementById('short-term-preview');
     if (preview.style.display === 'none') {
       const shortTurns = state.memorySettings.shortTermTurns;
-      const nonWelcome = state.messages.filter(m => !m.isWelcome && !m.pending);
+      // 从数据库获取全部消息以确保统计准确
+      var allMsgsForShort = [];
+      try {
+        allMsgsForShort = await db.getAllMessages();
+      } catch (_) {
+        allMsgsForShort = state.messages;
+      }
+      var nonWelcome = allMsgsForShort.filter(m => !m.isWelcome && !m.pending);
       const windowSize = shortTurns * 2;
       const recent = nonWelcome.slice(-windowSize);
       if (recent.length === 0) {
         preview.textContent = '暂无短期记忆内容';
       } else {
         let text = '';
+        var actualTurns = 0;
         for (const m of recent) {
+          if (m.role === 'assistant') actualTurns++;
           const roleName = m.role === 'user' ? getUserName() : getCharName();
           const content = m.role === 'user' ? (m.userText || m.rawText) : (m.rawText || '').replace(/\[\[STATUS\]\][\s\S]*?\[\[\/STATUS\]\]/, '').trim();
           const short = content.length > 100 ? content.slice(0, 100) + '...' : content;
