@@ -5520,7 +5520,24 @@ function buildMessages() {
         apiMessages.pop();
       }
     }
-    apiMessages.push({ role: 'user', content: '[系统指令] 请接着你上一条回复的内容继续往下写，保持叙事节奏和语气的连贯性。不要重复已经写过的内容，从上次结束的地方自然衔接。保持相同的格式要求（状态栏 + 正文）。' });
+    // 找到最后一条 assistant 消息，提取尾部用于提示
+    var lastAssistantTail = '';
+    for (var _cwi = apiMessages.length - 1; _cwi >= 0; _cwi--) {
+      if (apiMessages[_cwi].role === 'assistant' && typeof apiMessages[_cwi].content === 'string') {
+        var _ct = apiMessages[_cwi].content.trim();
+        lastAssistantTail = _ct.length > 60 ? '...' + _ct.slice(-60) : _ct;
+        break;
+      }
+    }
+    var continueHint = '[系统指令 · 续写] 请接着你上一条回复继续往下写。要求：\n';
+    continueHint += '1. 直接从上次结束的地方自然衔接，禁止重复已写内容\n';
+    continueHint += '2. 保持相同的叙事节奏、人称、语气\n';
+    continueHint += '3. 仍需输出完整的 [[STATUS]]...[[/STATUS]] 状态栏（在上次状态基础上自然递进）\n';
+    continueHint += '4. 续写正文长度控制在 100~400 字\n';
+    if (lastAssistantTail) {
+      continueHint += '\n上次回复的结尾片段：「' + lastAssistantTail + '」\n请从此处自然衔接。';
+    }
+    apiMessages.push({ role: 'user', content: continueHint });
   }
   // 重回用户要求注入
   if (state._regenUserRequirement) {
@@ -6050,12 +6067,29 @@ async function receiveReply() {
         renderAllMessages();
       }
 
-      // 显示错误
+      // 显示错误（人性化分类）
+      var friendlyMsg = err.message || '连接失败';
+      var friendlyHint = '';
+      var errStr = String(err.message || '').toLowerCase();
+      if (errStr.indexOf('failed to fetch') !== -1 || errStr.indexOf('networkerror') !== -1 || errStr.indexOf('load failed') !== -1) {
+        friendlyMsg = '🌐 网络连接中断';
+        friendlyHint = '请检查 Wi-Fi 或移动数据，确认 API 地址可访问';
+      } else if (errStr.indexOf('timeout') !== -1 || errStr.indexOf('timed out') !== -1) {
+        friendlyMsg = '⏱️ 请求超时';
+        friendlyHint = '服务器响应慢，请稍后重试或切换 API 节点';
+      } else if (errStr.indexOf('cors') !== -1) {
+        friendlyMsg = '🔒 跨域访问被拒绝';
+        friendlyHint = '该 API 不支持浏览器直接访问，请使用支持 CORS 的中转站';
+      }
       const errorBlock = document.createElement('div');
       errorBlock.className = 'error-block';
       errorBlock.id = 'error-retry-block';
-      errorBlock.innerHTML = '<span>' + escapeHtml(err.message || '连接失败，请检查网络或 API 设置') + '</span>' +
-        '<button class="retry-btn" id="btn-retry">重试</button>';
+      var errInnerHtml = '<span>' + escapeHtml(friendlyMsg) + '</span>';
+      if (friendlyHint) {
+        errInnerHtml += '<span style="font-size:12px;color:var(--text-muted);margin-top:-4px">' + escapeHtml(friendlyHint) + '</span>';
+      }
+      errInnerHtml += '<button class="retry-btn" id="btn-retry">重试</button>';
+      errorBlock.innerHTML = errInnerHtml;
       inner.appendChild(errorBlock);
       scrollToBottom();
 
@@ -6069,14 +6103,25 @@ async function receiveReply() {
     state.abortController = null;
     state._continueWritingMode = false;
     state._regenUserRequirement = '';
-    // 清理可能残留的占位消息DOM
+    // 清理可能残留的占位消息（DOM + 内存 + 数据库三处都清）
+    var placeholderIds = [];
     state.messages.forEach(function(m) {
       if (m._isContinuePlaceholder) {
+        placeholderIds.push(m.id);
         var placeholderEl = document.querySelector('[data-msg-id="' + m.id + '"]');
         if (placeholderEl) placeholderEl.remove();
       }
     });
     state.messages = state.messages.filter(function(m) { return !m._isContinuePlaceholder; });
+    state.pendingMessages = state.pendingMessages.filter(function(m) { return !m._isContinuePlaceholder; });
+    // 从数据库彻底删除占位消息
+    for (var _ppi = 0; _ppi < placeholderIds.length; _ppi++) {
+      try {
+        var _ptx = db._tx('messages', 'readwrite');
+        _ptx.objectStore('messages').delete(placeholderIds[_ppi]);
+        await db._txComplete(_ptx);
+      } catch (_) {}
+    }
     updateSendButton();
   }
 }
@@ -6094,21 +6139,34 @@ async function checkMemoryTrigger() {
   var autoEnabled = state.memorySettings.autoSummaryEnabled !== false;
   if (!autoEnabled) return;
 
-  var nonWelcomeAssistant = state.messages.filter(function(m) { return !m.isWelcome && m.role === 'assistant' && !m.pending; });
-  var turns = nonWelcomeAssistant.length;
+  // 用数据库全量数据统计，避免内存窗口加载不全导致漏算
+  var totalAssistantTurns = 0;
+  try {
+    var allMsgs = await db.getAllMessages();
+    for (var i = 0; i < allMsgs.length; i++) {
+      if (!allMsgs[i].isWelcome && !allMsgs[i].pending && allMsgs[i].role === 'assistant') {
+        totalAssistantTurns++;
+      }
+    }
+  } catch (_) {
+    var nonWelcomeAssistant = state.messages.filter(function(m) { return !m.isWelcome && m.role === 'assistant' && !m.pending; });
+    totalAssistantTurns = nonWelcomeAssistant.length;
+  }
+
   var trigger = state.memorySettings.summaryTriggerTurns;
+  if (trigger <= 0 || totalAssistantTurns <= 0) return;
 
-  if (trigger <= 0 || turns <= 0 || turns % trigger !== 0) return;
-
-  // 避免重复触发同一轮
   var lastSummaryTurn = state.memorySettings._lastSummaryTurn || 0;
-  if (turns <= lastSummaryTurn) return;
+  var sinceLast = totalAssistantTurns - lastSummaryTurn;
+
+  // 累计未总结轮数 >= 触发阈值时才触发
+  if (sinceLast < trigger) return;
 
   try {
     var confirmed = await triggerMemorySummary();
     // 只有用户确认写入时，才更新已总结轮数
     if (confirmed === true) {
-      state.memorySettings._lastSummaryTurn = turns;
+      state.memorySettings._lastSummaryTurn = totalAssistantTurns;
       state.memorySettings._lastSummaryTime = Date.now();
       await db.setSetting('settings_memory', state.memorySettings);
       showToast('记忆已写入（第 ' + state.longTermMemory.length + ' 条）', 'success', 4000);
@@ -6127,7 +6185,14 @@ async function triggerMemorySummary() {
   if (!apiSettings.apiKey) return;
 
   var trigger = state.memorySettings.summaryTriggerTurns;
-  var nonWelcome = state.messages.filter(function(m) { return !m.isWelcome && !m.pending; });
+  // 从数据库取全量，避免内存窗口不全
+  var nonWelcome = [];
+  try {
+    var allMsgsForTrigger = await db.getAllMessages();
+    nonWelcome = allMsgsForTrigger.filter(function(m) { return !m.isWelcome && !m.pending; });
+  } catch (_) {
+    nonWelcome = state.messages.filter(function(m) { return !m.isWelcome && !m.pending; });
+  }
   var lastTurn = state.memorySettings._lastSummaryTurn || 0;
   var assistantOnly = nonWelcome.filter(function(m) { return m.role === 'assistant'; });
   var newTurns = assistantOnly.length - lastTurn;
@@ -10329,6 +10394,16 @@ setSplashProgress(60);
       state.hasMoreMessages = older.length > 0;
     }
 setSplashProgress(75);
+    // 启动时清理上次残留的占位消息
+    var leftoverPlaceholders = state.messages.filter(function(m) { return m._isContinuePlaceholder; });
+    for (var _lpi = 0; _lpi < leftoverPlaceholders.length; _lpi++) {
+      try {
+        var _ltx = db._tx('messages', 'readwrite');
+        _ltx.objectStore('messages').delete(leftoverPlaceholders[_lpi].id);
+        await db._txComplete(_ltx);
+      } catch (_) {}
+    }
+    state.messages = state.messages.filter(function(m) { return !m._isContinuePlaceholder; });
     // 恢复 pending 消息
     state.pendingMessages = state.messages.filter(m => m.pending);
 
@@ -11321,15 +11396,24 @@ function updateQuickPhraseLayout() {
     if (!phrase) return;
     var input = document.getElementById('chat-input');
     if (!input) return;
-    var cursorPos = input.selectionStart;
-    if (cursorPos === undefined || cursorPos === null) cursorPos = input.value.length;
+    // 关键：先 focus 再读光标位置，否则在 textarea 失焦时 selectionStart 不准
+    var hadFocus = (document.activeElement === input);
+    var cursorPos;
+    if (hadFocus && typeof input.selectionStart === 'number') {
+      cursorPos = input.selectionStart;
+    } else {
+      cursorPos = input.value.length;
+    }
     var before = input.value.slice(0, cursorPos);
     var after = input.value.slice(cursorPos);
-    input.value = before + phrase.content + after;
+    // 如果光标前不是空白且不是空，补一个空格分隔
+    var needSpace = before.length > 0 && !/\s$/.test(before) && !/^\s/.test(phrase.content);
+    var insertText = (needSpace ? ' ' : '') + phrase.content;
+    input.value = before + insertText + after;
     autoResizeInput();
     updateSendButton();
     input.focus();
-    var newPos = cursorPos + phrase.content.length;
+    var newPos = cursorPos + insertText.length;
     try { input.setSelectionRange(newPos, newPos); } catch (_) {}
   });
 
@@ -11385,7 +11469,10 @@ function enterQpBarSortMode() {
     _qpBarExitHandler = null;
   }
   _qpBarExitHandler = function(e) {
-    if (e.target.closest('#quick-phrase-scroll')) return;
+    // 点击短语栏内部、toast、确认弹窗都不退出
+    if (e.target.closest('#quick-phrase-bar')) return;
+    if (e.target.closest('.toast')) return;
+    if (e.target.closest('.modal-overlay.open')) return;
     exitQpBarSortMode();
   };
   setTimeout(function() {
@@ -11583,7 +11670,9 @@ function renderQpListSortView() {
 
   // 条目点击
   listEl.querySelectorAll('[data-qp-sort-id]').forEach(function(item) {
-    item.addEventListener('click', function() {
+    item.addEventListener('click', function(ev) {
+      // 排序模式下点击只用于交换，阻止其他事件
+      ev.stopPropagation();
       var clickedId = item.dataset.qpSortId;
 
       // 第一次选择
