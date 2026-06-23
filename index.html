@@ -649,6 +649,20 @@ a { color:inherit; text-decoration:none; }
   width:60px; height:60px; display:flex; align-items:center; justify-content:center;
   background:var(--bg-surface); border-radius:6px; color:var(--text-muted);
 }
+/* 图片预览弹窗 */
+#image-preview-modal img {
+  cursor: zoom-out;
+}
+#image-preview-modal.zoomed-in img {
+  transform: scale(2);
+  cursor: grab;
+}
+.user-content .emoji-standalone img,
+.user-content .image-standalone img,
+.emoji-row img,
+.char-content img {
+  cursor: pointer;
+}
 /* 独立表情包消息（不包裹气泡） */
 .user-content .emoji-standalone {
   display:flex; flex-wrap:wrap; gap:6px;
@@ -699,6 +713,7 @@ a { color:inherit; text-decoration:none; }
   display:flex; align-items:center; gap:2px;
   margin-top:6px;
   padding-top:4px;
+  flex-wrap:wrap;
 }
 .msg-act-btn {
   width:30px; height:30px;
@@ -2039,7 +2054,15 @@ a { color:inherit; text-decoration:none; }
     </div>
   </div>
 </div>
-
+<!-- 图片预览弹窗 -->
+<div id="image-preview-modal" class="modal-overlay" style="z-index:400;background:rgba(0,0,0,0.85)">
+  <div style="position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:16px">
+    <img id="image-preview-img" src="" alt="" style="max-width:100%;max-height:100%;object-fit:contain;border-radius:4px;user-select:none;transition:transform 200ms ease">
+  </div>
+  <button id="image-preview-close" style="position:fixed;top:12px;right:12px;width:40px;height:40px;border-radius:50%;background:rgba(255,255,255,0.15);display:flex;align-items:center;justify-content:center;border:none;cursor:pointer;z-index:401">
+    <svg viewBox="0 0 24 24" style="width:20px;height:20px;stroke:#fff;stroke-width:2;fill:none"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+</div>
 <!-- Toast 容器 -->
 <div id="toast-container"></div>
 
@@ -3605,7 +3628,10 @@ function showConfirm(text, isDanger = false) {
     const okBtn = document.getElementById('confirm-ok');
     okBtn.className = isDanger ? 'btn-confirm btn-danger' : 'btn-confirm';
     modal.classList.add('open');
+    let _resolved = false;
     const cleanup = (result) => {
+      if (_resolved) return;
+      _resolved = true;
       modal.classList.remove('open');
       okBtn.removeEventListener('click', onOk);
       document.getElementById('confirm-cancel').removeEventListener('click', onCancel);
@@ -3650,7 +3676,10 @@ function showPrompt(title, defaultValue, options) {
       if (useTextarea) textareaEl.focus();
       else inputEl.focus();
     }, 100);
+    var _resolved = false;
     var cleanup = function(result) {
+      if (_resolved) return;
+      _resolved = true;
       modal.classList.remove('open');
       okBtn.removeEventListener('click', onOk);
       cancelBtn.removeEventListener('click', onCancel);
@@ -4394,6 +4423,7 @@ async function editStatusBar() {
       prevBtn.removeEventListener('click', onPrev);
       nextBtn.removeEventListener('click', onNext);
       textareaEl.style.minHeight = '';
+      descEl.style.display = 'none';
       if (navBar.parentNode) navBar.parentNode.removeChild(navBar);
     }
 
@@ -4420,10 +4450,206 @@ async function editStatusBar() {
     okBtn.addEventListener('click', onOk);
     cancelBtn.addEventListener('click', onCancel);
 
+    // 重置按钮
+    var resetBtn = document.createElement('button');
+    resetBtn.className = 'btn-confirm';
+    resetBtn.style.cssText = 'background:var(--warning-color);margin-left:8px;';
+    resetBtn.textContent = '重置';
+    cancelBtn.parentNode.insertBefore(resetBtn, okBtn);
+
+    var onReset = async function() {
+      if (!state.apiSettings.apiKey) {
+        showToast('请先在设置中填写 API 密钥', 'warning');
+        return;
+      }
+      // 先关闭当前弹窗，弹出输入框
+      modal.classList.remove('open');
+      var userReq = await showPrompt('状态栏重置', '', {
+        placeholder: '可选：输入额外要求（如时间设定、穿着等），留空则纯粹根据上下文重置',
+        description: '重置会让 AI 根据最近对话重新生成全部状态栏字段。\n如果你有特定要求（比如"时间设为下午三点"、"穿着改为校服"），请在下方输入，AI 会优先满足。'
+      });
+      if (userReq === null) {
+        // 用户取消了，重新打开编辑弹窗并重新绑定事件
+        modal.classList.add('open');
+        okBtn.addEventListener('click', onOk);
+        cancelBtn.addEventListener('click', onCancel);
+        prevBtn.addEventListener('click', onPrev);
+        nextBtn.addEventListener('click', onNext);
+        return;
+      }
+      // 显示进度
+      modal.classList.add('open');
+      resetBtn.disabled = true;
+      resetBtn.textContent = '重置中...';
+      try {
+        var result = await regenerateStatusBar(userReq);
+        if (result) {
+          cleanup();
+          if (resetBtn.parentNode) resetBtn.parentNode.removeChild(resetBtn);
+          showToast('状态栏已重置', 'success');
+          resolveMain();
+        } else {
+          resetBtn.disabled = false;
+          resetBtn.textContent = '重置';
+        }
+      } catch (err) {
+        resetBtn.disabled = false;
+        resetBtn.textContent = '重置';
+        showToast('重置失败: ' + err.message, 'error');
+      }
+    };
+    resetBtn.addEventListener('click', onReset);
+
+    var _cleanedUp = false;
+    var origCleanup = cleanup;
+    cleanup = function() {
+      if (_cleanedUp) return;
+      _cleanedUp = true;
+      resetBtn.removeEventListener('click', onReset);
+      if (resetBtn.parentNode) resetBtn.parentNode.removeChild(resetBtn);
+      origCleanup();
+    };
+
     renderCurrentPage();
     modal.classList.add('open');
     setTimeout(function() { textareaEl.focus(); }, 100);
   });
+}
+async function regenerateStatusBar(userRequirement) {
+  var charName = getCharName();
+  var userName = getUserName();
+  var api = state.apiSettings;
+
+  // 收集最近对话
+  var nonWelcome = state.messages.filter(function(m) { return !m.isWelcome && !m.pending; });
+  var recent = nonWelcome.slice(-20);
+  var dialogText = '';
+  for (var i = 0; i < recent.length; i++) {
+    var m = recent[i];
+    if (m.role === 'user') {
+      var txt = (m.userText || m.rawText || '').replace(/\[emo:[^\]]+\]/g, '').replace(/\[图片:[^\]]*\]/g, '').trim();
+      if (txt) dialogText += userName + '：' + txt + '\n';
+    } else {
+      var body = (m.rawText || '').replace(/\[\[STATUS\]\][\s\S]*?\[\[\/STATUS\]\]/, '').trim();
+      if (body) dialogText += charName + '：' + body.slice(0, 200) + '\n';
+    }
+  }
+
+  // 时间锚点
+  var timeHint = '';
+  if (api.enableRealTime) {
+    timeHint = '当前真实时间是 ' + formatTimestamp(Date.now()) + '，状态栏时间必须与真实时间一致。';
+  } else {
+    if (state.lastStatus && state.lastStatus['时间']) {
+      timeHint = '上一次状态栏时间为「' + state.lastStatus['时间'] + '」，请在此基础上合理设定（允许保持不变或小幅递进）。';
+    } else {
+      timeHint = '请根据对话内容和剧情合理设定时间。';
+    }
+  }
+
+  var systemPrompt = '你的唯一任务：根据角色设定和最近对话，重新生成一份完整的状态栏。\n\n';
+
+  if (state.charMeta.description) {
+    systemPrompt += '【角色设定】\n' + state.charMeta.description + '\n\n';
+  }
+  if (state.userMeta.description) {
+    systemPrompt += '【关于 ' + userName + '】\n' + state.userMeta.description + '\n\n';
+  }
+
+  systemPrompt += '【输出格式 · 铁律】\n';
+  systemPrompt += '只输出状态栏，不输出任何其他文字、解释、前缀或正文。\n';
+  systemPrompt += '[[STATUS]]必须是你输出的第一个字符。\n\n';
+  systemPrompt += '[[STATUS]]\n';
+  systemPrompt += '时间：[年/月/日 时:分]（' + timeHint + '）\n';
+  systemPrompt += '地点：[大范围 · 具体位置]（例如：城市名 · 咖啡馆二楼靠窗）\n';
+  systemPrompt += '天气：[天气描述 温度°C]（例如：阴转小雨 18°C）\n';
+  systemPrompt += '衣着：[' + charName + '此刻的穿着，具体到面料与款式]\n';
+  systemPrompt += '健康：[当前身体状态]（例如：良好 / 轻微疲惫 / 右肩酸痛）\n';
+  systemPrompt += '动作：[' + charName + '正在进行的动作，现在进行时]\n';
+  systemPrompt += '心情：[' + charName + '当前情绪，克制简短]\n';
+  systemPrompt += '思绪：[' + charName + '内心的真实想法，必须使用第一人称"我"，20~50字]\n';
+  systemPrompt += '[[/STATUS]]\n\n';
+
+  systemPrompt += '状态栏连续性规则：\n';
+  systemPrompt += '- 必须在上一次状态栏的基础上做合理递进，而不是凭空编造全新状态\n';
+  systemPrompt += '- 地点变更必须有对话中的合理依据，否则保持不变\n';
+  systemPrompt += '- 衣着只有在剧情中明确换装时才能改变，否则必须与上次完全相同\n';
+  systemPrompt += '- 天气在同一天内应保持基本一致，只做微小自然变化\n';
+  systemPrompt += '- 如果没有任何理由改变某个字段，就直接照搬上一次的值\n';
+
+  // 上次状态栏参考
+  if (state.lastStatus) {
+    systemPrompt += '\n【上次状态栏参考】\n';
+    var statusFields = ['时间', '地点', '天气', '衣着', '健康', '动作', '心情', '思绪'];
+    for (var sf = 0; sf < statusFields.length; sf++) {
+      var key = statusFields[sf];
+      if (state.lastStatus[key]) {
+        systemPrompt += key + '：' + state.lastStatus[key] + '\n';
+      }
+    }
+  }
+
+  // 用户要求（最高优先级）
+  if (userRequirement && userRequirement.trim()) {
+    systemPrompt += '\n【用户要求 · 最高优先级，必须满足】\n' + userRequirement.trim() + '\n';
+  }
+
+  var userContent = '以下是最近的对话内容，请据此重新生成状态栏：\n\n' + dialogText;
+
+  var memFormat = api.format || 'openai';
+  var url = getApiEndpoint(api.baseUrl, memFormat, 'chat');
+  var headers = getApiHeaders(api.apiKey, memFormat);
+  var msgs = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: userContent }
+  ];
+  var bodyData = buildApiRequestBody(memFormat, api.model, msgs, {
+    maxTokens: 500, temperature: 0.3, stream: false
+  });
+
+  var response = await fetch(url, { method: 'POST', headers: headers, body: JSON.stringify(bodyData) });
+  if (!response.ok) throw new Error('HTTP ' + response.status);
+
+  var data = await response.json();
+  var content = '';
+  if (data.choices && data.choices[0] && data.choices[0].message) {
+    content = data.choices[0].message.content || '';
+  } else if (data.content && Array.isArray(data.content) && data.content[0]) {
+    content = data.content[0].text || '';
+  }
+  if (!content) throw new Error('AI 未返回内容');
+
+  var statusMatch = content.match(/\[\[STATUS\]\]([\s\S]*?)\[\[\/STATUS\]\]/);
+  var rawStatus = statusMatch ? statusMatch[1] : content;
+  var newStatus = {};
+  rawStatus.trim().split('\n').forEach(function(line) {
+    var idx = line.indexOf('：');
+    if (idx !== -1) {
+      newStatus[line.slice(0, idx).trim()] = line.slice(idx + 1).trim();
+    }
+  });
+
+  var requiredFields = ['时间', '地点', '天气', '衣着', '健康', '动作', '心情', '思绪'];
+  var validCount = 0;
+  for (var fi = 0; fi < requiredFields.length; fi++) {
+    if (newStatus[requiredFields[fi]]) validCount++;
+  }
+  if (validCount < 4) throw new Error('解析到的字段不足（' + validCount + '/8），请重试');
+
+  var recentAssistant = [];
+  for (var ri = state.messages.length - 1; ri >= 0; ri--) {
+    if (state.messages[ri].role === 'assistant' && !state.messages[ri].isWelcome) {
+      recentAssistant.push(state.messages[ri]);
+      if (recentAssistant.length >= 3) break;
+    }
+  }
+  for (var wi = 0; wi < recentAssistant.length; wi++) {
+    recentAssistant[wi].status = newStatus;
+    try { await db.updateMessage(recentAssistant[wi].id, { status: newStatus }); } catch (_) {}
+  }
+
+  updateStatusBar(newStatus);
+  return true;
 }
 function toggleStatusDrawer() {
   state.statusDrawerOpen = !state.statusDrawerOpen;
@@ -4933,12 +5159,6 @@ function buildSystemPrompt() {
     system += `【以往记忆摘要】\n以下是 ${charName} 对过往经历的记忆摘要，按时间顺序排列：\n${ltText}\n\n`;
   }
 
-  // [6.5] 状态时间线（注入到system提示词中，避免AI在对话中模仿格式）
-  var _statusTimeline = buildStatusTimeline(3);
-  if (_statusTimeline) {
-    system += _statusTimeline + '\n\n';
-  }
-
   //[7] 时间系统提示（双分支）
   if (state.apiSettings.enableRealTime) {
     // ── 真实时间分支 ──
@@ -5025,7 +5245,11 @@ function buildSystemPrompt() {
 - 状态栏[[STATUS]]至[[/STATUS]]之间的全部内容控制在 200 字以内
 - 短回复不低于 100 字，保证叙事有呼吸感；长回复不超过 500 字，保持凝练克制
 - 不为凑字数而水词，不为省字数而吞掉必要的动作和情绪描写`;
-
+// [9] 状态时间线（放在格式要求之后，防止AI模仿时间线格式）
+  var _statusTimeline = buildStatusTimeline(3);
+  if (_statusTimeline) {
+    system += '\n\n' + _statusTimeline + '\n\n';
+  }
 system = system.replace(/\{\{user\}\}/g, userName).replace(/\{\{char\}\}/g, charName);
   return system;
 }
@@ -5074,7 +5298,7 @@ function buildMessages() {
         var visionParts = [];
         var cleanText = textContent.replace(/\[图片:[^\]]*\]/g, '').replace(/\[emo:[^\]]*\]/g, '').trim();
         if (hasEmojiImages && !hasImages) {
-          visionParts.push({ type: 'text', text: cleanText || '（用户发送了表情包图片，请仔细观察图片中的表情、文字、动作等细节来理解用户想表达的情绪和意思，并在回复中自然地回应这份情绪）' });
+          visionParts.push({ type: 'text', text: cleanText || '（' + getUserName() + '在手机聊天中发送了一张表情包图片。表情包是聊天中表达情绪的方式，不是真实照片。请仔细观察图片里的表情动作和文字，理解对方想传达的情绪或态度，然后以' + getCharName() + '的身份自然回应这份情绪，不要描述图片本身）' });
         } else {
           visionParts.push({ type: 'text', text: cleanText || '（用户发送了图片，请观察图片内容并自然回应）' });
         }
@@ -5107,11 +5331,12 @@ function buildMessages() {
       apiMessages.push({ role: 'assistant', content: content });
     }
   }
-  // 合并 pending 消息
-  if (state.pendingMessages.length > 0) {
+  // 合并 pending 消息（排除续写占位消息）
+  var realPendingMessages = state.pendingMessages.filter(function(pm) { return !pm._isContinuePlaceholder; });
+  if (realPendingMessages.length > 0) {
     let combined = '';
     const allEmojiRefs = [];
-    for (const pm of state.pendingMessages) {
+    for (const pm of realPendingMessages) {
       if (combined) combined += '\n';
       const emojiPattern = /\[emo:([^\]]+)\]/g;
       let cleanText = pm.userText.replace(emojiPattern, '').trim();
@@ -5126,14 +5351,14 @@ function buildMessages() {
       if (_peRef.b64 && _peRef.b64.startsWith('data:image/')) {
         pendingHasEmojiB64 = true;
       } else {
-        combined += '\n[表情包:' + _peRef.name + '（请识别图片内容理解情绪）]';
+        combined += '\n[' + getUserName() + '发送了表情包「' + _peRef.name + '」，这是聊天中表达情绪的方式，请根据表情包名称推断情绪并自然回应]';
       }
     }
 
     // 检查是否有图片消息需要用 vision 格式
     var allImageRefs = [];
-    for (var pi = 0; pi < state.pendingMessages.length; pi++) {
-      var pm = state.pendingMessages[pi];
+    for (var pi = 0; pi < realPendingMessages.length; pi++) {
+      var pm = realPendingMessages[pi];
       if (pm.imageRefs && pm.imageRefs.length > 0) {
         for (var iri = 0; iri < pm.imageRefs.length; iri++) {
           allImageRefs.push(pm.imageRefs[iri]);
@@ -5149,7 +5374,7 @@ function buildMessages() {
       } else if (allImageRefs.length > 0) {
         contentParts.push({ type: 'text', text: '（用户发送了图片，请观察图片内容并自然回应）' });
       } else {
-        contentParts.push({ type: 'text', text: '（用户发送了表情包图片，请仔细观察图片中的表情、文字、动作等细节来理解用户想表达的情绪和意思，并在回复中自然地回应这份情绪）' });
+        contentParts.push({ type: 'text', text: '（' + getUserName() + '在手机聊天中发送了一张表情包图片。表情包是聊天中表达情绪的方式，不是真实照片。请仔细观察图片里的表情动作和文字，理解对方想传达的情绪或态度，然后以' + getCharName() + '的身份自然回应这份情绪，不要描述图片本身）' });
       }
       for (var imgI = 0; imgI < allImageRefs.length; imgI++) {
         contentParts.push({
@@ -5181,6 +5406,10 @@ function buildMessages() {
       }
     }
     apiMessages.push({ role: 'user', content: '[系统指令] 请接着你上一条回复的内容继续往下写，保持叙事节奏和语气的连贯性。不要重复已经写过的内容，从上次结束的地方自然衔接。保持相同的格式要求（状态栏 + 正文）。' });
+  }
+  // 重回用户要求注入
+  if (state._regenUserRequirement) {
+    apiMessages.push({ role: 'user', content: '[用户对本次回复的额外要求（最高优先级，必须满足）] ' + state._regenUserRequirement });
   }
   // 注入共读书上下文
   var readerContent = getCurrentPageContent();
@@ -5309,8 +5538,19 @@ async function receiveReply() {
       else if (response.status >= 500) errMsg = '💥 服务器内部错误 (' + response.status + ')，请稍后重试';
       else if (response.status === 400) {
         var errDetail = '';
-        try { var ej = JSON.parse(errText); errDetail = (ej.error && ej.error.message) || ''; } catch(_){}
-        errMsg = '⚠️ 请求参数有误' + (errDetail ? '：' + errDetail.slice(0, 100) : '，请检查模型名称是否正确');
+        try {
+          var ej = JSON.parse(errText);
+          errDetail = (ej.error && ej.error.message) || ej.message || ej.msg || '';
+        } catch(_){
+          errDetail = errText.slice(0, 150);
+        }
+        if (errDetail.toLowerCase().indexOf('model') !== -1) {
+          errMsg = '⚠️ 模型名称可能不正确：' + errDetail.slice(0, 100);
+        } else if (errDetail.toLowerCase().indexOf('context') !== -1 || errDetail.toLowerCase().indexOf('token') !== -1) {
+          errMsg = '⚠️ 上下文过长，请尝试压缩对话或减少短期记忆轮数：' + errDetail.slice(0, 100);
+        } else {
+          errMsg = '⚠️ 请求参数有误' + (errDetail ? '：' + errDetail.slice(0, 120) : '，请检查模型名称和 API 格式是否匹配');
+        }
       }
       else errMsg = '请求失败 (HTTP ' + response.status + ')' + (errText ? '：' + errText.slice(0, 120) : '');
       throw new Error(errMsg);
@@ -5321,10 +5561,23 @@ async function receiveReply() {
       if (waitEl.parentNode) waitEl.parentNode.removeChild(waitEl);
       const data = await response.json();
       let content = '';
+      // OpenAI 标准
       if (data.choices && data.choices[0] && data.choices[0].message) {
         content = data.choices[0].message.content || '';
-      } else if (data.content && Array.isArray(data.content) && data.content[0]) {
-        content = data.content[0].text || '';
+      }
+      // Anthropic 原生
+      else if (data.content && Array.isArray(data.content)) {
+        content = data.content.map(function(c) { return c.text || ''; }).join('');
+      }
+      // 某些中转站的简化格式
+      else if (data.response) {
+        content = data.response;
+      }
+      else if (data.result) {
+        content = typeof data.result === 'string' ? data.result : (data.result.content || data.result.text || '');
+      }
+      else if (data.message && typeof data.message === 'string') {
+        content = data.message;
       }
       replyMsg.rawText = content;
       const parsed = parseAIOutput(content);
@@ -5337,6 +5590,18 @@ async function receiveReply() {
       try { await db.addMessage(replyMsg); } catch (err) { showToast('保存回复失败: ' + err.message, 'error'); }
       appendMessageElement(replyMsg);
       scrollToBottom();
+      // 处理重回版本数据
+      if (state._regenVersionData) {
+        var versionData = state._regenVersionData;
+        delete state._regenVersionData;
+        if (versionData.versions) {
+          replyMsg.versions = versionData.versions;
+          replyMsg.versions.push({ rawText: replyMsg.rawText, displayParts: replyMsg.displayParts, status: replyMsg.status, timestamp: replyMsg.timestamp });
+          replyMsg.currentVersion = replyMsg.versions.length - 1;
+          try { await db.updateMessage(replyMsg.id, { versions: replyMsg.versions, currentVersion: replyMsg.currentVersion }); } catch (_) {}
+          renderAllMessages();
+        }
+      }
       await checkMemoryTrigger();
       return;
     }
@@ -5433,7 +5698,6 @@ async function receiveReply() {
       return 30 + Math.floor(Math.random() * 31);
     }
     _renderNextChar();
-    var renderInterval = { _id: true };
 
     const processChunk = (text) => {
       for (let i = 0; i < text.length; i++) {
@@ -5504,21 +5768,59 @@ async function receiveReply() {
         for (const line of lines) {
           const trimmed = line.trim();
           if (!trimmed) continue;
-          if (trimmed === 'data: [DONE]') continue;
-          if (trimmed.startsWith('event:')) continue;
-          if (!trimmed.startsWith('data:') && !trimmed.startsWith('data: ')) continue;
-          const jsonStr = trimmed.startsWith('data: ') ? trimmed.slice(6) : trimmed.slice(5);
+          if (trimmed === 'data: [DONE]' || trimmed === 'data:[DONE]') continue;
+          if (trimmed.startsWith('event:') || trimmed.startsWith(':')) continue;
+
+          var jsonStr = '';
+          if (trimmed.startsWith('data: ')) {
+            jsonStr = trimmed.slice(6);
+          } else if (trimmed.startsWith('data:')) {
+            jsonStr = trimmed.slice(5);
+          } else if (trimmed.startsWith('{')) {
+            // 有些中转站不加 data: 前缀，直接发 JSON
+            jsonStr = trimmed;
+          } else {
+            continue;
+          }
           if (!jsonStr.trim()) continue;
+
           try {
             const json = JSON.parse(jsonStr);
             let text = '';
-            if (json.choices && json.choices[0] && json.choices[0].delta) {
-              text = json.choices[0].delta.content || '';
-            } else if (json.type === 'content_block_delta' && json.delta) {
+
+            // OpenAI 标准格式
+            if (json.choices && json.choices[0]) {
+              var choice = json.choices[0];
+              if (choice.delta && choice.delta.content) {
+                text = choice.delta.content;
+              } else if (choice.delta && choice.delta.role) {
+                // role-only delta, skip
+                continue;
+              } else if (choice.message && choice.message.content) {
+                // 非流式响应混入流式（部分中转站行为）
+                text = choice.message.content;
+              } else if (choice.text) {
+                // completions 格式兼容
+                text = choice.text;
+              }
+            }
+            // Anthropic 原生格式
+            else if (json.type === 'content_block_delta' && json.delta) {
               text = json.delta.text || '';
-            } else if (json.delta && json.delta.text) {
+            }
+            // Anthropic message_start / message_delta
+            else if (json.type === 'message_start' || json.type === 'message_stop' || json.type === 'content_block_start' || json.type === 'content_block_stop' || json.type === 'ping') {
+              continue;
+            }
+            // 通用 fallback
+            else if (json.delta && json.delta.text) {
               text = json.delta.text;
             }
+            // 某些中转站直接返回 {content: "..."}
+            else if (json.content && typeof json.content === 'string') {
+              text = json.content;
+            }
+
             if (text) {
               processChunk(text);
             }
@@ -5621,6 +5923,14 @@ async function receiveReply() {
         fb.pending = false;
         state.messages.push(fb);
         try { await db.addMessage(fb); } catch (_) {}
+        // 恢复用户消息的非pending状态
+        for (var _rpi = 0; _rpi < pendingCopy.length; _rpi++) {
+          var _rpm = pendingCopy[_rpi];
+          if (_rpm._isContinuePlaceholder) continue;
+          _rpm.pending = false;
+          try { await db.updateMessage(_rpm.id, { pending: false }); } catch (_) {}
+        }
+        state.pendingMessages = [];
         delete state._regenVersionData;
         renderAllMessages();
       }
@@ -5643,6 +5953,15 @@ async function receiveReply() {
     state.isGenerating = false;
     state.abortController = null;
     state._continueWritingMode = false;
+    state._regenUserRequirement = '';
+    // 清理可能残留的占位消息DOM
+    state.messages.forEach(function(m) {
+      if (m._isContinuePlaceholder) {
+        var placeholderEl = document.querySelector('[data-msg-id="' + m.id + '"]');
+        if (placeholderEl) placeholderEl.remove();
+      }
+    });
+    state.messages = state.messages.filter(function(m) { return !m._isContinuePlaceholder; });
     updateSendButton();
   }
 }
@@ -6272,7 +6591,19 @@ function initMsgLongPress() {
     }
     updateMultiSelectBar();
   });
-
+  // 图片点击预览
+  chatInner.addEventListener('click', function(e) {
+    if (_longPressTriggered) return;
+    if (state.multiSelectMode) return;
+    var img = e.target;
+    if (img.tagName !== 'IMG') return;
+    // 只处理消息区域内的图片（表情包、用户图片等）
+    var isInBubble = img.closest('.emoji-standalone') || img.closest('.image-standalone') || img.closest('.emoji-row');
+    if (!isInBubble) return;
+    e.preventDefault();
+    e.stopPropagation();
+    openImagePreview(img.src);
+  });
   // 阻止长按时的默认菜单
   chatInner.addEventListener('contextmenu', (e) => {
     if (_longPressTriggered) e.preventDefault();
@@ -6626,7 +6957,7 @@ async function continueWriting(msgId) {
 async function helpReply(msgId) {
   if (state.isGenerating) { showToast('正在生成中', 'warning'); return; }
   if (!state.apiSettings.apiKey) { showToast('请先在设置中填写 API 密钥', 'warning'); return; }
-  var btn = document.querySelector('[data-act-type="helpReply"][data-act-msg-id="' + msgId + '"]');
+  var btn = document.querySelector('[data-act-type="helpReply"][data-act-msg-id="' + msgId + '"]') || document.querySelector('.msg-act-btn[title="帮回"]');
   var originalSvg = '';
   if (btn) {
     originalSvg = btn.innerHTML;
@@ -6694,7 +7025,16 @@ async function helpReply(msgId) {
 async function regenFromBar(msgId) {
   var msg = state.messages.find(function(m) { return m.id === msgId; });
   if (!msg || msg.role !== 'assistant') return;
-  // 直接调用与旧版长按菜单 newver 相同的逻辑
+
+  var userReq = await showPrompt('重新生成回复', '', {
+    placeholder: '可选：输入额外要求（如语气、剧情方向等），留空则正常重回',
+    description: 'AI 将重新生成这条回复。\n如果你有特定要求（比如"语气更温柔"、"拒绝用户的邀请"），请在下方输入。'
+  });
+  if (userReq === null) return;
+
+  // 存储用户要求，在 receiveReply 中注入
+  state._regenUserRequirement = userReq.trim() || '';
+
   await handleMsgMenuAction('newver_bar', msgId, msg);
 }
 function enterMultiSelectMode(initialMsgId) {
@@ -6778,6 +7118,85 @@ async function deleteSelectedMessages() {
   updateSendButton();
   showToast('已删除 ' + count + ' 条消息', 'success');
 }
+// ══════════════════════════════════════════════════════
+// 图片预览
+// ══════════════════════════════════════════════════════
+function openImagePreview(src) {
+  if (!src) return;
+  var modal = document.getElementById('image-preview-modal');
+  var img = document.getElementById('image-preview-img');
+  img.src = src;
+  modal.classList.remove('zoomed-in');
+  modal.classList.add('open');
+}
+
+function closeImagePreview() {
+  var modal = document.getElementById('image-preview-modal');
+  modal.classList.remove('open', 'zoomed-in');
+  document.getElementById('image-preview-img').src = '';
+}
+
+(function initImagePreview() {
+  document.addEventListener('DOMContentLoaded', function() {
+    var modal = document.getElementById('image-preview-modal');
+    var img = document.getElementById('image-preview-img');
+    var closeBtn = document.getElementById('image-preview-close');
+
+    closeBtn.addEventListener('click', function(e) {
+      e.stopPropagation();
+      closeImagePreview();
+    });
+
+    // 点击图片切换缩放
+    img.addEventListener('click', function(e) {
+      e.stopPropagation();
+      modal.classList.toggle('zoomed-in');
+    });
+
+    // 点击背景关闭
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal || e.target.parentElement === modal) {
+        closeImagePreview();
+      }
+    });
+
+    // 拖拽缩放后的图片
+    var isDragging = false;
+    var dragStartX = 0, dragStartY = 0;
+    var imgOffsetX = 0, imgOffsetY = 0;
+
+    img.addEventListener('pointerdown', function(e) {
+      if (!modal.classList.contains('zoomed-in')) return;
+      isDragging = true;
+      dragStartX = e.clientX - imgOffsetX;
+      dragStartY = e.clientY - imgOffsetY;
+      img.style.cursor = 'grabbing';
+      e.preventDefault();
+    });
+
+    document.addEventListener('pointermove', function(e) {
+      if (!isDragging) return;
+      imgOffsetX = e.clientX - dragStartX;
+      imgOffsetY = e.clientY - dragStartY;
+      img.style.transform = 'scale(2) translate(' + (imgOffsetX / 2) + 'px, ' + (imgOffsetY / 2) + 'px)';
+    });
+
+    document.addEventListener('pointerup', function() {
+      if (isDragging) {
+        isDragging = false;
+        img.style.cursor = '';
+      }
+    });
+
+    // 关闭时重置位置
+    var origClose = closeImagePreview;
+    closeImagePreview = function() {
+      imgOffsetX = 0;
+      imgOffsetY = 0;
+      origClose();
+    };
+  });
+})();
 // ══════════════════════════════════════════════════════
 // 抽屉
 // ══════════════════════════════════════════════════════
@@ -8599,31 +9018,54 @@ function refreshShortTermInfo() {
 // ══════════════════════════════════════════════════════
 function getApiEndpoint(baseUrl, format, path) {
   let base = baseUrl.replace(/\/+$/, '');
+
   if (format === 'anthropic') {
-    if (path === 'chat') {
-      if (base.endsWith('/v1') || base.endsWith('/v1/messages')) {
-        return base.replace(/\/v1(\/messages)?$/, '') + '/v1/messages';
-      }
-      return base + '/v1/messages';
-    }
-    if (path === 'models') {
-      return base.replace(/\/v1(\/.*)?$/, '') + '/v1/models';
-    }
+    // 清理掉用户可能多填的路径
+    base = base.replace(/\/v1(\/messages)?(\/)?$/, '').replace(/\/v1(\/models)?(\/)?$/, '');
+    if (path === 'chat') return base + '/v1/messages';
+    if (path === 'models') return base + '/v1/models';
+    return base + '/v1/' + path;
   }
+
+  // OpenAI 兼容格式 - 兼容各种中转站写法
+  // 用户可能填：
+  //   https://api.openai.com
+  //   https://api.openai.com/v1
+  //   https://api.openai.com/v1/chat/completions
+  //   https://example.com/api
+  //   https://example.com/api/v1
+
   if (path === 'chat') {
-    if (base.endsWith('/v1') || base.endsWith('/v1/chat/completions')) {
-      return base.replace(/\/v1(\/chat\/completions)?$/, '') + '/v1/chat/completions';
-    }
+    // 如果已经包含完整路径，直接用
     if (base.endsWith('/chat/completions')) return base;
+    if (base.endsWith('/v1/chat')) return base + '/completions';
+    // 清除可能存在的 /v1 后缀再拼接
+    if (base.endsWith('/v1')) return base + '/chat/completions';
+    // 检测是否看起来像自定义 path（如 /api、/proxy 等）
+    // 尝试判断：如果末尾不是域名或端口，可能是自定义路径
+    var urlObj = null;
+    try { urlObj = new URL(base); } catch (_) {}
+    if (urlObj) {
+      var pathname = urlObj.pathname.replace(/\/+$/, '');
+      // 空路径或仅 /，添加标准路径
+      if (!pathname || pathname === '/') return base + '/v1/chat/completions';
+      // 自定义路径（如 /api/v1），直接追加
+      if (pathname.length > 1 && !pathname.endsWith('/v1')) {
+        return base + '/v1/chat/completions';
+      }
+    }
     return base + '/v1/chat/completions';
   }
+
   if (path === 'models') {
-    if (base.endsWith('/v1') || base.endsWith('/v1/models')) {
-      return base.replace(/\/v1(\/models)?$/, '') + '/v1/models';
-    }
+    if (base.endsWith('/models')) return base;
+    if (base.endsWith('/v1')) return base + '/models';
+    base = base.replace(/\/v1\/chat\/completions$/, '').replace(/\/chat\/completions$/, '');
+    if (base.endsWith('/v1')) return base + '/models';
     return base + '/v1/models';
   }
-  return base + path;
+
+  return base + '/' + path;
 }
 
 function getApiHeaders(apiKey, format) {
@@ -8636,10 +9078,15 @@ function getApiHeaders(apiKey, format) {
       'anthropic-dangerous-direct-browser-access': 'true'
     };
   }
-  return {
+  // OpenAI 兼容 - 同时支持 Bearer 和直接 key
+  var headers = {
     'Content-Type': 'application/json',
-    'Authorization': 'Bearer ' + apiKey
+    'Accept': 'text/event-stream, application/json'
   };
+  if (apiKey) {
+    headers['Authorization'] = 'Bearer ' + apiKey;
+  }
+  return headers;
 }
 
 function buildApiRequestBody(format, model, messages, opts) {
@@ -8737,8 +9184,16 @@ async function testAPI() {
     });
 
     if (response.ok) {
+      var testData = null;
+      try { testData = await response.json(); } catch (_) {}
+      var modelInfo = '';
+      if (testData) {
+        if (testData.model) modelInfo = ' · 模型: ' + testData.model;
+        else if (testData.choices && testData.choices[0]) modelInfo = ' · 回复正常';
+        else if (testData.content) modelInfo = ' · Anthropic 格式正常';
+      }
       resultEl.className = 'api-test-result success';
-      resultEl.innerHTML = '<svg viewBox="0 0 24 24" style="stroke:currentColor"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>连接成功</span>';
+      resultEl.innerHTML = '<svg viewBox="0 0 24 24" style="stroke:currentColor"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg><span>连接成功' + escapeHtml(modelInfo) + '</span>';
     } else {
       let errMsg = 'HTTP ' + response.status;
       try {
@@ -9138,81 +9593,176 @@ async function deepCompress() {
   var btn = document.getElementById('btn-deep-compress');
   btn.disabled = true;
   var cleaned = 0;
+  var freedEstimate = 0;
+
   try {
-    // 1. 清理 orphan blob（引用已失效的图片缓存）
-    // 当前只保留 char_avatar, user_avatar, page_bg 三个已知 key
-    // 其他的都是 orphan
+    // ════ 1. 清理 orphan blob ════
     var knownBlobKeys = new Set(['char_avatar', 'user_avatar', 'page_bg']);
     var allBlobKeys = [];
-    await new Promise(function(resolve, reject) {
+    await new Promise(function(resolve) {
       var tx = db._tx('blobs', 'readonly');
       var store = tx.objectStore('blobs');
       var req = store.openCursor();
       req.onsuccess = function(e) {
         var cursor = e.target.result;
         if (cursor) {
-          allBlobKeys.push(cursor.value.key);
+          allBlobKeys.push({ key: cursor.value.key, size: cursor.value.blob ? cursor.value.blob.size || 0 : 0 });
           cursor.continue();
-        } else {
-          resolve();
-        }
+        } else { resolve(); }
       };
       req.onerror = function() { resolve(); };
     });
-    var orphanKeys = allBlobKeys.filter(function(k) { return !knownBlobKeys.has(k); });
+    var orphanKeys = allBlobKeys.filter(function(k) { return !knownBlobKeys.has(k.key); });
     if (orphanKeys.length > 0) {
       var tx2 = db._tx('blobs', 'readwrite');
       var store2 = tx2.objectStore('blobs');
       for (var ok = 0; ok < orphanKeys.length; ok++) {
-        store2.delete(orphanKeys[ok]);
+        store2.delete(orphanKeys[ok].key);
+        freedEstimate += orphanKeys[ok].size;
         cleaned++;
       }
       await db._txComplete(tx2);
     }
 
-    // 2. 清理消息中过大的 imageRefs base64（已发送过的图片数据可以缩小）
+    // ════ 2. 处理消息数据 ════
     var allMsgs = await db.getAllMessages();
-    var compressedMsgs = 0;
+    var recentBoundary = Math.max(0, allMsgs.length - 30);
+
     for (var mi = 0; mi < allMsgs.length; mi++) {
       var msg = allMsgs[mi];
       var modified = false;
-      // 清理已经成功发送的 pending 标记
+      var isOld = mi < recentBoundary;
+
+      // 2a. 清理残留的 pending 标记
       if (msg.pending && !state.pendingMessages.some(function(pm) { return pm.id === msg.id; })) {
         msg.pending = false;
         modified = true;
       }
-      // 清除 imageRefs 中超大的 base64 数据（保留 URL 引用但删除内联数据以节省空间）
-      // 注意：只压缩非最近 20 条消息的图片数据
-      if (mi < allMsgs.length - 20 && msg.imageRefs && msg.imageRefs.length > 0) {
+
+      // 2b. 压缩旧消息的大图片 base64
+      if (isOld && msg.imageRefs && msg.imageRefs.length > 0) {
         for (var ir = 0; ir < msg.imageRefs.length; ir++) {
           var ref = msg.imageRefs[ir];
-          if (ref.url && ref.url.length > 50000) {
-            // 将大图片 base64 替换为占位标记，节省大量空间
+          if (ref.url && ref.url.length > 30000) {
+            freedEstimate += ref.url.length * 2;
             ref.url = 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIxMDAiIGhlaWdodD0iMTAwIj48cmVjdCB3aWR0aD0iMTAwIiBoZWlnaHQ9IjEwMCIgZmlsbD0iI2VlZSIvPjx0ZXh0IHg9IjUwIiB5PSI1NSIgdGV4dC1hbmNob3I9Im1pZGRsZSIgZmlsbD0iI2FhYSIgZm9udC1zaXplPSIxMiI+5bey5Y6L57iqPC90ZXh0Pjwvc3ZnPg==';
             ref.name = (ref.name || '图片') + '(已压缩)';
             modified = true;
-            compressedMsgs++;
           }
         }
       }
-      // 同样处理 emojiRefs 中的 b64
-      if (mi < allMsgs.length - 20 && msg.emojiRefs && msg.emojiRefs.length > 0) {
+
+      // 2c. 清理旧消息的表情包 base64 缓存
+      if (isOld && msg.emojiRefs && msg.emojiRefs.length > 0) {
         for (var er = 0; er < msg.emojiRefs.length; er++) {
           var eRef = msg.emojiRefs[er];
-          if (eRef.b64 && eRef.b64.length > 20000) {
+          if (eRef.b64 && eRef.b64.length > 5000) {
+            freedEstimate += eRef.b64.length * 2;
             eRef.b64 = null;
             modified = true;
-            compressedMsgs++;
           }
         }
       }
+
+      // 2d. 清理旧消息的冗余 versions 数据（只保留当前版本）
+      if (isOld && msg.versions && msg.versions.length > 1) {
+        var curVer = typeof msg.currentVersion === 'number' ? msg.currentVersion : msg.versions.length - 1;
+        var keptVersion = msg.versions[curVer];
+        var oldVersionsSize = JSON.stringify(msg.versions).length * 2;
+        msg.versions = [keptVersion];
+        msg.currentVersion = 0;
+        freedEstimate += oldVersionsSize - JSON.stringify(msg.versions).length * 2;
+        modified = true;
+      }
+
+      // 2e. 清理旧 assistant 消息中过长的 rawText 中的重复 STATUS 块
+      if (isOld && msg.role === 'assistant' && msg.rawText) {
+        var statusCount = (msg.rawText.match(/\[\[STATUS\]\]/g) || []).length;
+        if (statusCount > 1) {
+          // 只保留第一个 STATUS 块
+          var firstEnd = msg.rawText.indexOf('[[/STATUS]]');
+          if (firstEnd !== -1) {
+            var afterFirst = msg.rawText.slice(firstEnd + '[[/STATUS]]'.length);
+            var cleanAfter = afterFirst.replace(/\[\[STATUS\]\][\s\S]*?\[\[\/STATUS\]\]/g, '').trim();
+            var firstPart = msg.rawText.slice(0, firstEnd + '[[/STATUS]]'.length);
+            var newRaw = firstPart + '\n\n' + cleanAfter;
+            if (newRaw.length < msg.rawText.length) {
+              freedEstimate += (msg.rawText.length - newRaw.length) * 2;
+              msg.rawText = newRaw;
+              var reParsed = parseAIOutput(msg.rawText);
+              msg.displayParts = reParsed.displayParts;
+              modified = true;
+            }
+          }
+        }
+      }
+
+      // 2f. 清理 displayParts 中的空条目
+      if (msg.displayParts && msg.displayParts.length > 0) {
+        var cleanParts = msg.displayParts.filter(function(p) { return p.text && p.text.trim(); });
+        if (cleanParts.length < msg.displayParts.length) {
+          msg.displayParts = cleanParts;
+          modified = true;
+        }
+      }
+
       if (modified) {
         try { await db.addMessage(msg); } catch (_) {}
         cleaned++;
       }
     }
 
-    // 同步内存中的消息
+    // ════ 3. 清理世界书中已删除条目的文件夹残留引用 ════
+    var wbIds = new Set(state.worldBook.map(function(w) { return w.id; }));
+    var folderModified = false;
+    for (var fi = 0; fi < state.worldBookFolders.length; fi++) {
+      var folder = state.worldBookFolders[fi];
+      if (!folder.items) continue;
+      var before = folder.items.length;
+      folder.items = folder.items.filter(function(id) { return wbIds.has(id); });
+      if (folder.items.length < before) {
+        folderModified = true;
+        cleaned += (before - folder.items.length);
+      }
+    }
+    // 清理空文件夹
+    var beforeFolderCount = state.worldBookFolders.length;
+    state.worldBookFolders = state.worldBookFolders.filter(function(f) {
+      return (f.items && f.items.length > 0) || f.name;
+    });
+    if (state.worldBookFolders.length < beforeFolderCount) {
+      folderModified = true;
+      cleaned += (beforeFolderCount - state.worldBookFolders.length);
+    }
+    if (folderModified) {
+      try { await db.saveWorldBookFolders(state.worldBookFolders); } catch (_) {}
+    }
+
+    // ════ 4. 清理收藏中引用已删除消息的条目 ════
+    var msgIdSet = new Set(allMsgs.map(function(m) { return m.id; }));
+    var orphanFavs = state.favorites.filter(function(f) { return f.msgId && !msgIdSet.has(f.msgId); });
+    if (orphanFavs.length > 0) {
+      for (var oi = 0; oi < orphanFavs.length; oi++) {
+        try { await db.deleteFavorite(orphanFavs[oi].id); } catch (_) {}
+        cleaned++;
+      }
+      state.favorites = state.favorites.filter(function(f) { return !f.msgId || msgIdSet.has(f.msgId); });
+    }
+
+    // ════ 5. 清理 KV 中的孤立阅读进度 ════
+    var bookIds = new Set(state.books.map(function(b) { return b.id; }));
+    var allSettings = await db.getAllSettings();
+    for (var settingKey in allSettings) {
+      if (settingKey.startsWith('reader_progress_')) {
+        var bookId = settingKey.replace('reader_progress_', '');
+        if (!bookIds.has(bookId)) {
+          try { await db.deleteSetting(settingKey); } catch (_) {}
+          cleaned++;
+        }
+      }
+    }
+
+    // ════ 刷新 ════
     try {
       var freshMsgs = await db.getRecentMessages(200);
       state.messages = freshMsgs;
@@ -9222,13 +9772,15 @@ async function deepCompress() {
       renderAllMessages();
     } catch (_) {}
     await refreshDataStats();
+
     btn.disabled = false;
     if (cleaned === 0) {
       hintEl.textContent = '数据已是最优状态，无需压缩';
       showToast('数据已是最优状态', 'success');
     } else {
-      hintEl.textContent = '已优化 ' + cleaned + ' 项数据';
-      showToast('深度压缩完成，优化了 ' + cleaned + ' 项数据', 'success');
+      var freedText = freedEstimate > 1024 ? formatBytes(freedEstimate) : '';
+      hintEl.textContent = '已优化 ' + cleaned + ' 项' + (freedText ? '，约释放 ' + freedText : '');
+      showToast('深度压缩完成，优化了 ' + cleaned + ' 项数据' + (freedText ? '（约释放 ' + freedText + '）' : ''), 'success');
     }
   } catch (err) {
     btn.disabled = false;
