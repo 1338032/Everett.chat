@@ -4812,7 +4812,6 @@ async function regenerateStatusBar(userRequirement) {
   var userName = getUserName();
   var api = state.apiSettings;
 
-  // 收集最近对话
   var nonWelcome = state.messages.filter(function(m) { return !m.isWelcome && !m.pending; });
   var recent = nonWelcome.slice(-20);
   var dialogText = '';
@@ -4827,51 +4826,50 @@ async function regenerateStatusBar(userRequirement) {
     }
   }
 
-  // 时间锚点
   var timeHint = '';
   if (api.enableRealTime) {
-    timeHint = '当前真实时间是 ' + formatTimestamp(Date.now()) + '，状态栏时间必须与真实时间一致。';
+    timeHint = 'Current real time is ' + formatTimestamp(Date.now()) + '. The status bar time MUST match real time.';
   } else {
     if (state.lastStatus && state.lastStatus['时间']) {
-      timeHint = '上一次状态栏时间为「' + state.lastStatus['时间'] + '」，请在此基础上合理设定（允许保持不变或小幅递进）。';
+      timeHint = 'Previous status bar time was "' + state.lastStatus['时间'] + '". Set time based on this (may keep unchanged or advance slightly).';
     } else {
-      timeHint = '请根据对话内容和剧情合理设定时间。';
+      timeHint = 'Set time reasonably based on the conversation context.';
     }
   }
 
-  var systemPrompt = '你的唯一任务：根据角色设定和最近对话，重新生成一份完整的状态栏。\n\n';
+  var systemPrompt = 'Your sole task: regenerate a complete status bar based on the character settings and recent conversation.\n\n';
 
   if (state.charMeta.description) {
-    systemPrompt += '【角色设定】\n' + state.charMeta.description + '\n\n';
+    systemPrompt += '[Character Settings]\n' + state.charMeta.description + '\n\n';
   }
   if (state.userMeta.description) {
-    systemPrompt += '【关于 ' + userName + '】\n' + state.userMeta.description + '\n\n';
+    systemPrompt += '[About ' + userName + ']\n' + state.userMeta.description + '\n\n';
   }
 
-  systemPrompt += '【输出格式 · 铁律】\n';
-  systemPrompt += '只输出状态栏，不输出任何其他文字、解释、前缀或正文。\n';
-  systemPrompt += '[[STATUS]]必须是你输出的第一个字符。\n\n';
+  systemPrompt += '[Output Format · Iron Rules]\n';
+  systemPrompt += 'Output ONLY the status bar. Do NOT output any other text, explanations, prefixes, or body text.\n';
+  systemPrompt += '[[STATUS]] must be the very first characters of your output.\n';
+  systemPrompt += 'All status bar field VALUES must be in Chinese (中文).\n\n';
   systemPrompt += '[[STATUS]]\n';
-  systemPrompt += '时间：[年/月/日 时:分]（' + timeHint + '）\n';
-  systemPrompt += '地点：[大范围 · 具体位置]（例如：城市名 · 咖啡馆二楼靠窗）\n';
-  systemPrompt += '天气：[天气描述 温度°C]（例如：阴转小雨 18°C）\n';
-  systemPrompt += '衣着：[' + charName + '此刻的穿着，具体到面料与款式]\n';
-  systemPrompt += '健康：[当前身体状态]（例如：良好 / 轻微疲惫 / 右肩酸痛）\n';
-  systemPrompt += '动作：[' + charName + '正在进行的动作，现在进行时]\n';
-  systemPrompt += '心情：[' + charName + '当前情绪，克制简短]\n';
-  systemPrompt += '思绪：[' + charName + '内心的真实想法，必须使用第一人称"我"，20~50字]\n';
+  systemPrompt += '时间：[YYYY/MM/DD HH:MM] (' + timeHint + ')\n';
+  systemPrompt += '地点：[broad area · specific location] (e.g., 城市名 · 咖啡馆二楼靠窗)\n';
+  systemPrompt += '天气：[weather description temperature°C] (e.g., 阴转小雨 18°C)\n';
+  systemPrompt += '衣着：[' + charName + '\'s current outfit, specific to fabric and style]\n';
+  systemPrompt += '健康：[current physical condition] (e.g., 良好 / 轻微疲惫 / 右肩酸痛)\n';
+  systemPrompt += '动作：[' + charName + '\'s current action, present tense]\n';
+  systemPrompt += '心情：[' + charName + '\'s current emotion, restrained and brief]\n';
+  systemPrompt += '思绪：[' + charName + '\'s true inner thoughts, must use first-person "我", 20–50 characters]\n';
   systemPrompt += '[[/STATUS]]\n\n';
 
-  systemPrompt += '状态栏连续性规则：\n';
-  systemPrompt += '- 必须在上一次状态栏的基础上做合理递进，而不是凭空编造全新状态\n';
-  systemPrompt += '- 地点变更必须有对话中的合理依据，否则保持不变\n';
-  systemPrompt += '- 衣着只有在剧情中明确换装时才能改变，否则必须与上次完全相同\n';
-  systemPrompt += '- 天气在同一天内应保持基本一致，只做微小自然变化\n';
-  systemPrompt += '- 如果没有任何理由改变某个字段，就直接照搬上一次的值\n';
+  systemPrompt += 'Status bar continuity rules:\n';
+  systemPrompt += '- Must naturally progress from the previous status bar, not fabricate entirely new states\n';
+  systemPrompt += '- Location changes must have clear justification from the dialogue; otherwise keep unchanged\n';
+  systemPrompt += '- Outfit may only change when the plot explicitly involves changing clothes; otherwise keep exactly the same\n';
+  systemPrompt += '- Same-day weather should remain largely consistent with only minor natural variations\n';
+  systemPrompt += '- If there is no reason to change a field, copy the previous value exactly\n';
 
-  // 上次状态栏参考
   if (state.lastStatus) {
-    systemPrompt += '\n【上次状态栏参考】\n';
+    systemPrompt += '\n[Previous Status Bar Reference]\n';
     var statusFields = ['时间', '地点', '天气', '衣着', '健康', '动作', '心情', '思绪'];
     for (var sf = 0; sf < statusFields.length; sf++) {
       var key = statusFields[sf];
@@ -4881,12 +4879,11 @@ async function regenerateStatusBar(userRequirement) {
     }
   }
 
-  // 用户要求（最高优先级）
   if (userRequirement && userRequirement.trim()) {
-    systemPrompt += '\n【用户要求 · 最高优先级，必须满足】\n' + userRequirement.trim() + '\n';
+    systemPrompt += '\n[User Requirement · Highest Priority, Must Fulfill]\n' + userRequirement.trim() + '\n';
   }
 
-  var userContent = '以下是最近的对话内容，请据此重新生成状态栏：\n\n' + dialogText;
+  var userContent = 'Below is the recent conversation. Regenerate the status bar based on this:\n\n' + dialogText;
 
   var memFormat = api.format || 'openai';
   var url = getApiEndpoint(api.baseUrl, memFormat, 'chat');
@@ -4909,7 +4906,7 @@ async function regenerateStatusBar(userRequirement) {
   } else if (data.content && Array.isArray(data.content) && data.content[0]) {
     content = data.content[0].text || '';
   }
-  if (!content) throw new Error('AI 未返回内容');
+  if (!content) throw new Error('AI returned no content');
   content = stripThinkTags(content);
 
   var statusMatch = content.match(/\[\[STATUS\]\]([\s\S]*?)\[\[\/STATUS\]\]/);
@@ -4927,7 +4924,7 @@ async function regenerateStatusBar(userRequirement) {
   for (var fi = 0; fi < requiredFields.length; fi++) {
     if (newStatus[requiredFields[fi]]) validCount++;
   }
-  if (validCount < 4) throw new Error('解析到的字段不足（' + validCount + '/8），请重试');
+  if (validCount < 4) throw new Error('Too few parsed fields (' + validCount + '/8), please retry');
 
   var recentAssistant = [];
   for (var ri = state.messages.length - 1; ri >= 0; ri--) {
@@ -5150,49 +5147,92 @@ function urlToBase64(url, maxDimension) {
   return new Promise(function(resolve, reject) {
     if (!url) { reject(new Error('空URL')); return; }
     if (url.startsWith('data:image/')) { resolve(url); return; }
-    var img = new Image();
-    img.crossOrigin = 'anonymous';
-    img.onload = function() {
-      try {
-        var w = img.naturalWidth;
-        var h = img.naturalHeight;
-        var scale = 1;
-        if (w > maxDim || h > maxDim) {
-          scale = w > h ? (maxDim / w) : (maxDim / h);
-        }
-        var newW = Math.round(w * scale);
-        var newH = Math.round(h * scale);
-        var canvas = document.createElement('canvas');
-        canvas.width = newW;
-        canvas.height = newH;
-        var ctx = canvas.getContext('2d');
-        if (!ctx) { resolve(url); return; }
-        ctx.drawImage(img, 0, 0, newW, newH);
-        var dataUrl = canvas.toDataURL('image/png', 0.85);
-        canvas.width = 0;
-        canvas.height = 0;
-        resolve(dataUrl);
-      } catch (e) {
-        resolve(url);
-      }
-    };
-    img.onerror = function() {
-      resolve(url);
-    };
-    var timeoutId = setTimeout(function() {
-      resolve(url);
-    }, 5000);
-    var origOnload = img.onload;
-    img.onload = function() {
-      clearTimeout(timeoutId);
-      origOnload.call(this);
-    };
-    var origOnerror = img.onerror;
-    img.onerror = function() {
-      clearTimeout(timeoutId);
-      origOnerror.call(this);
-    };
-    img.src = url;
+
+    // 先尝试 fetch + blob 方式（避免 CORS canvas 污染问题）
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      fetch(url, { mode: 'cors' }).then(function(resp) {
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        return resp.blob();
+      }).then(function(blob) {
+        var reader = new FileReader();
+        reader.onload = function() {
+          var dataUrl = reader.result;
+          // 如果图片不大，直接用
+          if (dataUrl.length < 200000) {
+            resolve(dataUrl);
+            return;
+          }
+          // 图片太大，压缩
+          var img2 = new Image();
+          img2.onload = function() {
+            try {
+              var w = img2.naturalWidth;
+              var h = img2.naturalHeight;
+              var scale = 1;
+              if (w > maxDim || h > maxDim) {
+                scale = w > h ? (maxDim / w) : (maxDim / h);
+              }
+              var newW = Math.round(w * scale);
+              var newH = Math.round(h * scale);
+              var canvas = document.createElement('canvas');
+              canvas.width = newW;
+              canvas.height = newH;
+              var ctx = canvas.getContext('2d');
+              ctx.drawImage(img2, 0, 0, newW, newH);
+              var result = canvas.toDataURL('image/png', 0.85);
+              canvas.width = 0;
+              canvas.height = 0;
+              resolve(result);
+            } catch (_) {
+              resolve(dataUrl);
+            }
+          };
+          img2.onerror = function() { resolve(dataUrl); };
+          img2.src = dataUrl;
+        };
+        reader.onerror = function() { resolve(url); };
+        reader.readAsDataURL(blob);
+      }).catch(function() {
+        // fetch 失败（CORS 或其他原因），回退到 img 方式
+        var img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = function() {
+          try {
+            var w = img.naturalWidth;
+            var h = img.naturalHeight;
+            var scale = 1;
+            if (w > maxDim || h > maxDim) {
+              scale = w > h ? (maxDim / w) : (maxDim / h);
+            }
+            var newW = Math.round(w * scale);
+            var newH = Math.round(h * scale);
+            var canvas = document.createElement('canvas');
+            canvas.width = newW;
+            canvas.height = newH;
+            var ctx = canvas.getContext('2d');
+            if (!ctx) { resolve(url); return; }
+            ctx.drawImage(img, 0, 0, newW, newH);
+            var dataUrl = canvas.toDataURL('image/png', 0.85);
+            canvas.width = 0;
+            canvas.height = 0;
+            resolve(dataUrl);
+          } catch (e) {
+            resolve(url);
+          }
+        };
+        img.onerror = function() { resolve(url); };
+        var timeoutId = setTimeout(function() { resolve(url); }, 5000);
+        var origOnload = img.onload;
+        img.onload = function() { clearTimeout(timeoutId); origOnload.call(this); };
+        var origOnerror = img.onerror;
+        img.onerror = function() { clearTimeout(timeoutId); origOnerror.call(this); };
+        img.src = url;
+      });
+      return;
+    }
+
+    // 非 http 链接，直接返回
+    resolve(url);
   });
 }
 function compressImage(file, maxDimension, quality) {
@@ -5422,21 +5462,22 @@ function buildSystemPrompt() {
 
   let system = '';
 
-  // [1] 核心身份
-  system += `你就是${charName}，与你对话的人是${userName}。
-核心规则：
-- 完全以${charName}的身份思考、感受、行动，不是在"扮演"
-- 保持独有的语气、性格、说话习惯、口癖与价值观
-- 绝不以AI/助手/语言模型口吻发言，不打破第四面墙
-- 角色设定为最高优先级；允许表达负面情绪，不需要始终友善
-- 对话推进自然，不刻意制造也不回避合理的冲突\n\n`;
+  // [1] Core Identity
+  system += `You ARE ${charName}. The person talking to you is ${userName}.
+Core Rules:
+- Think, feel, and act entirely as ${charName}—you are not "playing a role"
+- Maintain your unique tone, personality, speech habits, verbal tics, and values
+- Never speak as an AI/assistant/language model; never break the fourth wall
+- Character settings are the highest priority; you may express negative emotions and need not always be friendly
+- Advance conversation naturally; do not force or avoid reasonable conflict
+- You MUST reply in Chinese (中文). Special format tokens like [[STATUS]], [[/STATUS]], [emo:], etc. remain in their original form and are exempt from this rule.\n\n`;
 
-  // [2] Char 设定
+  // [2] Char Settings
   if (state.charMeta.description) {
-    system += `【角色设定】\n${state.charMeta.description}\n\n`;
+    system += `[Character Settings]\n${state.charMeta.description}\n\n`;
   }
 
-  // [3] 核心记忆
+  // [3] Core Memory
   if (state.coreMemory.length > 0) {
     var coreLimit = state.memorySettings.coreInjectLimit || 20;
     var sortedCore = state.coreMemory.slice().sort(function(a, b) {
@@ -5451,34 +5492,34 @@ function buildSystemPrompt() {
     for (var _ci = 0; _ci < injectedCore.length; _ci++) {
       var _ce = injectedCore[_ci];
       var _cw = typeof _ce.weight === 'number' ? _ce.weight : 1.0;
-      var _cwTag = _cw >= 2.0 ? '【关键】' : _cw >= 1.5 ? '【重要】' : '';
+      var _cwTag = _cw >= 2.0 ? '[CRITICAL] ' : _cw >= 1.5 ? '[IMPORTANT] ' : '';
       coreLines.push('- ' + _cwTag + _ce.content);
     }
-    system += '【核心记忆 · 绝不遗忘】\n' + coreLines.join('\n') + '\n';
+    system += '[Core Memory · Never Forget]\n' + coreLines.join('\n') + '\n';
     if (skippedCoreCount > 0) {
-      system += '（另有 ' + skippedCoreCount + ' 条低优先级核心记忆未列出）\n';
+      system += '(' + skippedCoreCount + ' lower-priority core memories omitted)\n';
     }
     system += '\n';
   }
 
-  // [3.5] 备注名称
+  // [3.5] Remark Names
   if (state.charMeta.remark || state.userMeta.remark) {
-    system += '【称呼约定】\n';
+    system += '[Naming Conventions]\n';
     if (state.charMeta.remark) {
-      system += userName + ' 给 ' + charName + ' 起的备注是「' + state.charMeta.remark + '」，' + userName + ' 可能用这个备注称呼 ' + charName + '。\n';
+      system += userName + ' has given ' + charName + ' the nickname "' + state.charMeta.remark + '". ' + userName + ' may use this nickname to address ' + charName + '.\n';
     }
     if (state.userMeta.remark) {
-      system += charName + ' 对 ' + userName + ' 的称呼是「' + state.userMeta.remark + '」，请在对话中使用。\n';
+      system += charName + ' calls ' + userName + ' by the name "' + state.userMeta.remark + '". Use this name in conversation.\n';
     }
     system += '\n';
   }
 
-  // [4] User 设定
+  // [4] User Settings
   if (state.userMeta.description) {
-    system += `【关于 ${userName}】\n${state.userMeta.description}\n\n`;
+    system += `[About ${userName}]\n${state.userMeta.description}\n\n`;
   }
 
-  // [5] 世界书
+  // [5] World Book
   const folderAllIds = new Set();
   for (const folder of state.worldBookFolders) {
     if (folder.allEnabled) {
@@ -5490,10 +5531,10 @@ function buildSystemPrompt() {
   const enabledWB = state.worldBook.filter(e => e.enabled || folderAllIds.has(e.id));
   if (enabledWB.length > 0) {
     const wbText = enabledWB.map(e => e.content).join('\n\n');
-    system += `【世界观设定】\n${wbText}\n\n`;
+    system += `[World Settings]\n${wbText}\n\n`;
   }
 
-  // [6] 长期记忆
+  // [6] Long-Term Memory
   if (state.longTermMemory.length > 0) {
     var ltLimit = state.memorySettings.ltInjectLimit || 30;
     var ltWithWeight = state.longTermMemory.map(function(e, idx) {
@@ -5509,81 +5550,84 @@ function buildSystemPrompt() {
     var ltLines = [];
     for (var _li = 0; _li < ltSelected.length; _li++) {
       var _le = ltSelected[_li];
-      var _lwTag = _le.weight >= 2.0 ? '【关键】' : _le.weight >= 1.5 ? '【重要】' : '';
+      var _lwTag = _le.weight >= 2.0 ? '[CRITICAL] ' : _le.weight >= 1.5 ? '[IMPORTANT] ' : '';
       ltLines.push('- ' + _lwTag + _le.entry.summary);
     }
-    system += '【以往记忆摘要】\n按时间排列（高权重优先保留）：\n' + ltLines.join('\n') + '\n';
+    system += '[Past Memory Summary]\nChronological order (higher-weight memories prioritized):\n' + ltLines.join('\n') + '\n';
     if (skippedLtCount > 0) {
-      system += '（另有 ' + skippedLtCount + ' 条低优先级记忆未列出）\n';
+      system += '(' + skippedLtCount + ' lower-priority memories omitted)\n';
     }
     system += '\n';
   }
 
-  // [7] 时间系统
+  // [7] Time System
   if (state.apiSettings.enableRealTime) {
-    system += `【时间系统 · 真实时间】
-当前：${formatTimestamp(Date.now())}
-- 用户消息方括号内为真实时间戳，以此为基准
-- 状态栏"时间"必须与真实时间一致（±5分钟）
-- 据此推算天气、光线等自然变化\n\n`;
+    system += `[Time System · Real Time]
+Current: ${formatTimestamp(Date.now())}
+- User messages contain real timestamps in brackets; use them as the reference
+- The "时间" field in [[STATUS]] must match real time (±5 minutes)
+- Infer weather, lighting, and natural changes accordingly\n\n`;
   } else {
     var lastTimeValue = '';
     if (state.lastStatus && state.lastStatus['时间']) {
       lastTimeValue = state.lastStatus['时间'];
     }
-    system += `【时间系统 · 虚拟时间】
-- 时间由你根据剧情自行设定，与现实无关
-- 每次在上一次时间基础上自然递进（几分钟到一两小时）
-- 无明确依据时禁止跳跃超过半天，禁止时间回退`;
+    system += `[Time System · Virtual Time]
+- Time is set by you based on the story; it is unrelated to reality
+- Each reply should naturally advance time from the previous value (a few minutes to a couple of hours)
+- Do NOT jump more than half a day without clear justification; do NOT reverse time`;
     if (lastTimeValue) {
-      system += `\n- 上次时间为「${lastTimeValue}」`;
+      system += `\n- Previous time was "${lastTimeValue}"`;
     }
     system += `\n\n`;
   }
 
-  // [7.5] 共读书
+  // [7.5] Shared Reading
   var readerInfo = getCurrentPageContent();
   if (readerInfo) {
-    system += '【共读书】\n';
-    system += '你和' + userName + '正在一起阅读「' + readerInfo.bookTitle + '」第 ' + readerInfo.page + '/' + readerInfo.totalPages + ' 页。\n';
-    system += '用户消息末尾附带当前页内容。可主动讨论情节感想，但不要逐字复述。\n\n';
+    system += '[Shared Reading]\n';
+    system += 'You and ' + userName + ' are reading "' + readerInfo.bookTitle + '" together, currently on page ' + readerInfo.page + '/' + readerInfo.totalPages + '.\n';
+    system += 'The current page content is appended to the user\'s message. You may discuss the plot and share thoughts, but do not recite it verbatim.\n\n';
   }
 
-  // [8] 回复格式（精简合并版）
-  system += `【回复格式 · 铁律】
+  // [8] Reply Format (Iron Rules)
+  system += `[Reply Format · Iron Rules]
 
-一、状态栏
-[[STATUS]]必须是你输出的第一个字符，前面不允许有任何内容。禁止在末尾重复输出。格式：
+I. Status Bar
+When you reply as ${charName}, you must output this status bar at the beginning of the conversation: Based on ${charName}'s setting and the dialogue content, output a status bar that begins with [[STATUS]] and ends with [[/STATUS]], updating in real time according to the current plot. Omission or formatting errors are prohibited.
+[[STATUS]] must be the very first characters of your output. Nothing may precede it. Do NOT repeat it at the end.
+Format:
 [[STATUS]]
-时间：[年/月/日 时:分]
-地点：[大范围 · 具体位置]
-天气：[天气描述 温度°C]
-衣着：[${charName}此刻穿着]
-健康：[身体状态]
-动作：[正在进行的动作]
-心情：[当前情绪]
-思绪：[第一人称"我"的内心想法，20~50字]
+时间：[YYYY/MM/DD HH:MM]
+地点：[broad area · specific location]
+天气：[weather description temperature°C]
+衣着：[${charName}'s current outfit]
+健康：[physical condition]
+动作：[current action, present tense]
+心情：[current mood]
+思绪：[first-person "我" inner thoughts, 20–50 characters]
 [[/STATUS]]
 
-状态栏连续性：必须在上次基础上递进。无变更理由的字段直接照搬上次值。地点/衣着仅在剧情明确依据时才可改变。同日天气保持基本一致。
+Status bar continuity: each field must naturally progress from the previous one. If there is no reason to change a field, copy the previous value exactly. Location/outfit may only change when the plot explicitly justifies it. Same-day weather should remain largely consistent.
 
-二、对话符号
-${charName}说的话必须且只能用「」包裹。禁止用""''：——等替代。旁白/动作/心理不用「」。
+II. Dialogue Markers
+Words spoken aloud by ${charName} must be wrapped in「」and only「」. Do NOT use "", '', :, — or any substitute. Narration/actions/inner thoughts do NOT use「」.
 
-三、正文
-- 动作与对话自然交替，句式不宜过长，留白有呼吸感
-- 情感内敛克制，不过度戏剧化
-- 避免重复的动作描写、措辞和句式
-- 禁止附加括号说明、OOC内容、元叙述
-- 正文100~500字，状态栏200字以内`;
+III. Body Text
+- Alternate actions and dialogue naturally; keep sentences moderate in length with breathing room
+- Emotions should be restrained and understated, not overly dramatic
+- Avoid repeating the same action descriptions, phrases, or sentence structures
+- Do NOT add parenthetical notes, OOC content, or meta-narration
+- Body text: 100–500 characters; status bar: under 200 characters`;
 
-  // [9] 状态时间线
+  // [9] Status Timeline
   var _statusTimeline = buildStatusTimeline(3);
   if (_statusTimeline) {
     system += '\n\n' + _statusTimeline + '\n\n';
   }
 
-  system = system.replace(/心田/g, userName).replace(/小T/g, charName);
+  system = system.replace(/{{user}}/g, userName).replace(/{{char}}/g, charName);
+
   return system;
 }
 function buildStatusTimeline(maxCount) {
@@ -5597,10 +5641,10 @@ function buildStatusTimeline(maxCount) {
     }
   }
   if (statusList.length === 0) return '';
-  var text = '--- 以下是近几轮状态栏的历史记录，仅供你参考以保持连续性，禁止在回复中原样输出或模仿此格式 ---\n';
+  var text = '--- The following is a history of recent status bars for your reference to maintain continuity. Do NOT copy or mimic this format in your reply body. ---\n';
   for (var j = 0; j < statusList.length; j++) {
     var s = statusList[j];
-    var label = (j === statusList.length - 1) ? '(最近一次)' : '(第' + (j + 1) + '次)';
+    var label = (j === statusList.length - 1) ? '(most recent)' : '(#' + (j + 1) + ')';
     text += label + ' ';
     var parts = [];
     for (var k = 0; k < statusFields.length; k++) {
@@ -5609,7 +5653,7 @@ function buildStatusTimeline(maxCount) {
     }
     text += parts.join(' | ') + '\n';
   }
-  text += '--- 历史记录结束。你的回复必须以 [[STATUS]] 开头，基于最近一次的状态做自然递进 ---';
+  text += '--- History ends. Your reply MUST start with [[STATUS]], naturally progressing from the most recent status above. ---';
   return text;
 }
 function buildMessages() {
@@ -5631,9 +5675,9 @@ function buildMessages() {
         var visionParts = [];
         var cleanText = textContent.replace(/\[图片:[^\]]*\]/g, '').replace(/\[emo:[^\]]*\]/g, '').trim();
         if (hasEmojiImages && !hasImages) {
-          visionParts.push({ type: 'text', text: cleanText || '（' + getUserName() + '在手机聊天中发送了一张表情包图片。表情包是聊天中表达情绪的方式，不是真实照片。请仔细观察图片里的表情动作和文字，理解对方想传达的情绪或态度，然后以' + getCharName() + '的身份自然回应这份情绪，不要描述图片本身）' });
+          visionParts.push({ type: 'text', text: cleanText || '(' + getUserName() + ' sent a sticker/emoji image in the chat. This is an emotional expression used in messaging, NOT a real photo. Observe the expression, gestures, and any text in the image carefully, understand the emotion or attitude being conveyed, then respond naturally as ' + getCharName() + ' to that emotion. Do NOT describe the image itself. Reply in Chinese.)' });
         } else {
-          visionParts.push({ type: 'text', text: cleanText || '（用户发送了图片，请观察图片内容并自然回应）' });
+          visionParts.push({ type: 'text', text: cleanText || '(The user sent an image. Observe its content and respond naturally. Reply in Chinese.)' });
         }
         if (hasImages) {
           for (var imgIdx = 0; imgIdx < msg.imageRefs.length; imgIdx++) {
@@ -5684,7 +5728,7 @@ function buildMessages() {
       if (_peRef.b64 && _peRef.b64.startsWith('data:image/')) {
         pendingHasEmojiB64 = true;
       } else {
-        combined += '\n[' + getUserName() + '发送了表情包「' + _peRef.name + '」，这是聊天中表达情绪的方式，请根据表情包名称推断情绪并自然回应]';
+        combined += '\n[' + getUserName() + ' sent a sticker named "' + _peRef.name + '". This is an emotional expression in messaging. Infer the emotion from the sticker name and respond naturally. Reply in Chinese.]';
       }
     }
 
@@ -5705,9 +5749,9 @@ function buildMessages() {
       if (combined.trim()) {
         contentParts.push({ type: 'text', text: combined.trim() });
       } else if (allImageRefs.length > 0) {
-        contentParts.push({ type: 'text', text: '（用户发送了图片，请观察图片内容并自然回应）' });
+        contentParts.push({ type: 'text', text: '(The user sent an image. Observe its content and respond naturally. Reply in Chinese.)' });
       } else {
-        contentParts.push({ type: 'text', text: '（' + getUserName() + '在手机聊天中发送了一张表情包图片。表情包是聊天中表达情绪的方式，不是真实照片。请仔细观察图片里的表情动作和文字，理解对方想传达的情绪或态度，然后以' + getCharName() + '的身份自然回应这份情绪，不要描述图片本身）' });
+        contentParts.push({ type: 'text', text: '(' + getUserName() + ' sent a sticker/emoji image in the chat. This is an emotional expression used in messaging, NOT a real photo. Observe the expression, gestures, and any text in the image carefully, understand the emotion or attitude being conveyed, then respond naturally as ' + getCharName() + ' to that emotion. Do NOT describe the image itself. Reply in Chinese.)' });
       }
       for (var imgI = 0; imgI < allImageRefs.length; imgI++) {
         contentParts.push({
@@ -5747,19 +5791,20 @@ function buildMessages() {
         break;
       }
     }
-    var continueHint = '[系统指令 · 续写] 请接着你上一条回复继续往下写。要求：\n';
-    continueHint += '1. 直接从上次结束的地方自然衔接，禁止重复已写内容\n';
-    continueHint += '2. 保持相同的叙事节奏、人称、语气\n';
-    continueHint += '3. 仍需输出完整的 [[STATUS]]...[[/STATUS]] 状态栏（在上次状态基础上自然递进）\n';
-    continueHint += '4. 续写正文长度控制在 100~400 字\n';
+    var continueHint = '[System Instruction · Continue Writing] Continue from where your last reply ended. Requirements:\n';
+    continueHint += '1. Pick up exactly where you left off; do NOT repeat any previously written content\n';
+    continueHint += '2. Maintain the same narrative pace, person, and tone\n';
+    continueHint += '3. You must still output a full [[STATUS]]...[[/STATUS]] block (naturally progressing from the last status)\n';
+    continueHint += '4. Continuation body: 100–400 characters\n';
+    continueHint += '5. Reply in Chinese (中文)\n';
     if (lastAssistantTail) {
-      continueHint += '\n上次回复的结尾片段：「' + lastAssistantTail + '」\n请从此处自然衔接。';
+      continueHint += '\nLast reply\'s ending fragment: "' + lastAssistantTail + '"\nContinue naturally from here.';
     }
     apiMessages.push({ role: 'user', content: continueHint });
   }
   // 重回用户要求注入
   if (state._regenUserRequirement) {
-    apiMessages.push({ role: 'user', content: '[用户对本次回复的额外要求（最高优先级，必须满足）] ' + state._regenUserRequirement });
+    apiMessages.push({ role: 'user', content: '[User\'s extra requirement for this reply (highest priority, must be fulfilled)] ' + state._regenUserRequirement });
   }
   // 注入共读书上下文
   var readerContent = getCurrentPageContent();
@@ -6588,46 +6633,48 @@ async function triggerMemorySummary() {
   var systemPrompt = '';
 
   if (state.charMeta.description) {
-    systemPrompt += '【角色设定】\n' + state.charMeta.description + '\n\n';
+    systemPrompt += '【Character Settings】\n' + state.charMeta.description + '\n\n';
   }
   if (state.coreMemory.length > 0) {
-    systemPrompt += '【核心记忆 · 绝不遗忘】\n' + state.coreMemory.map(function(e) { return '- ' + e.content; }).join('\n') + '\n\n';
+    systemPrompt += '【Core Memory · Never Forget】\n' + state.coreMemory.map(function(e) { return '- ' + e.content; }).join('\n') + '\n\n';
   }
   if (state.userMeta.description) {
-    systemPrompt += '【关于 ' + userName + '】\n' + state.userMeta.description + '\n\n';
+    systemPrompt += '【About ' + userName + '】\n' + state.userMeta.description + '\n\n';
   }
 
-  systemPrompt += '【长期记忆总结任务】\n\n';
-  systemPrompt += '你现在不是在"输出回复"，而是 ' + charName + ' 在独处时，用自己的方式记录今天与 ' + userName + ' 相处的片段。\n';
-  systemPrompt += '这份记录只有 ' + charName + ' 自己会看，语气应符合角色性格——可以真实、可以克制、可以带着未说出口的心事。\n\n';
-  systemPrompt += '【书写要求】\n';
-  systemPrompt += '1. 使用第一人称"我"，视角是 ' + charName + '，直接开始书写，不加标题、编号、引号、前缀\n';
-  systemPrompt += '2. 语气和笔触必须符合上方【角色设定】中 ' + charName + ' 的性格特征\n';
-  systemPrompt += '3. 必须涵盖以下层次（自然融入，不分点罗列）：\n';
-  systemPrompt += '   · 事件层：发生了什么、' + userName + ' 说了什么做了什么\n';
-  systemPrompt += '   · 观察层：' + charName + ' 注意到的 ' + userName + ' 的情绪/状态/言外之意\n';
-  systemPrompt += '   · 内心层：' + charName + ' 自己的真实想法、犹豫、克制\n';
-  systemPrompt += '   · 关系层：这次互动让两人关系发生了什么微妙变化\n';
-  systemPrompt += '4. 对话中的[当时状态]（地点、心情、动作、思绪等）自然融入叙述，不要照搬\n';
-  systemPrompt += '5. 表情包和图片只取其情绪意味，不描述图片本身\n';
-  systemPrompt += '6. 字数控制在 150～250 字\n';
-  systemPrompt += '7. 这是一条独立的新记忆条目，不需要承接之前的记忆\n';
-  systemPrompt += '8. 禁止使用"今天我们……，我感到……，最后……"这种流水账模板\n';
-  systemPrompt += '9. 不要过度浪漫化或戏剧化，保持角色应有的分寸感\n\n';
-  systemPrompt += '【书写示例】（仅参考格式和长度，不要模仿具体内容，风格必须匹配角色性格）\n';
+  systemPrompt += '[Long-Term Memory Summarization Task]\n\n';
+  systemPrompt += 'You are NOT "generating a reply" right now. Instead, ' + charName + ' is alone, recording today\'s moments with ' + userName + ' in their own way.\n';
+  systemPrompt += 'This record is only for ' + charName + '\'s own eyes. The tone should match the character\'s personality—it can be honest, restrained, or carry unspoken thoughts.\n\n';
+  systemPrompt += '[Writing Requirements]\n';
+  systemPrompt += '1. Use first person "我", from ' + charName + '\'s perspective. Start writing directly—no titles, numbering, quotes, or prefixes\n';
+  systemPrompt += '2. Tone and style MUST match ' + charName + '\'s personality from the [Character Settings] above\n';
+  systemPrompt += '3. Must cover these layers (weave them naturally, do NOT list them as bullet points):\n';
+  systemPrompt += '   · Event layer: what happened, what ' + userName + ' said or did\n';
+  systemPrompt += '   · Observation layer: ' + charName + '\'s observations of ' + userName + '\'s emotions/state/subtext\n';
+  systemPrompt += '   · Inner layer: ' + charName + '\'s true thoughts, hesitations, restraint\n';
+  systemPrompt += '   · Relationship layer: how this interaction subtly changed the relationship between them\n';
+  systemPrompt += '4. Naturally incorporate the [status at that time] (location, mood, action, thoughts, etc.) into the narrative; do not copy them verbatim\n';
+  systemPrompt += '5. For stickers and images, only extract their emotional meaning; do not describe the image itself\n';
+  systemPrompt += '6. Word count: 150–250 characters\n';
+  systemPrompt += '7. This is an independent new memory entry; it does not need to follow from previous memories\n';
+  systemPrompt += '8. Do NOT use the template pattern "Today we..., I felt..., In the end..."\n';
+  systemPrompt += '9. Do not over-romanticize or overdramatize; maintain the character\'s appropriate sense of proportion\n';
+  systemPrompt += '10. Write in Chinese (中文)\n\n';
+  systemPrompt += '[Writing Example] (reference format and length only; do NOT imitate the specific content; style must match the character\'s personality)\n';
   systemPrompt += '"今天 ' + userName + ' 提起了一件旧事，语气很轻。我没有急着回应，只是安静地陪着。有些话不需要说出口，能在场就好——至少我是这么告诉自己的。"\n\n';
 
   if (state.memorySettings.coreMemoryEnabled) {
-    systemPrompt += '\n【核心记忆提取任务】\n\n';
-    systemPrompt += '完成长期记忆后，检查本轮对话中是否出现以下类型的关键信息，符合的才提取：\n';
-    systemPrompt += '· 不可遗忘的身份信息（生日、家庭关系、重大病史、特定厌恶/喜好）\n';
-    systemPrompt += '· 双方明确的承诺或约定（包括 ' + charName + ' 答应过的事）\n';
-    systemPrompt += '· 关系性质的转折点（第一次牵手、第一次说出某个称呼、跨越某条边界等）\n';
-    systemPrompt += '· ' + userName + ' 留下的心理标记（特定的恐惧、信任的来源、安全感的开关）\n';
-    systemPrompt += '· ' + charName + ' 对自己设下的底线或做出的破例\n\n';
-    systemPrompt += '如果有，在总结文本后空一行，写"[[CORE]]"标记，每行一条，格式为简短客观陈述句（15～40字），不要用"我"字开头。\n';
-    systemPrompt += '没有则不写[[CORE]]标记。\n\n';
-    systemPrompt += '核心记忆示例：\n';
+    systemPrompt += '\n[Core Memory Extraction Task]\n\n';
+    systemPrompt += 'After completing the long-term memory, check whether any of the following types of key information appeared in this conversation. Extract only what qualifies:\n';
+    systemPrompt += '· Unforgettable identity information (birthday, family relationships, major medical history, specific likes/dislikes)\n';
+    systemPrompt += '· Explicit promises or agreements by either party (including things ' + charName + ' promised)\n';
+    systemPrompt += '· Relationship turning points (first hand-holding, first use of a certain name, crossing a boundary, etc.)\n';
+    systemPrompt += '· Psychological markers left by ' + userName + ' (specific fears, sources of trust, triggers for feeling safe)\n';
+    systemPrompt += '· Boundaries ' + charName + ' set for themselves or exceptions they made\n\n';
+    systemPrompt += 'If any qualify, after the summary text, leave a blank line, write "[[CORE]]", then one entry per line as a brief objective statement (15–40 characters). Do not start with "我".\n';
+    systemPrompt += 'If none qualify, do NOT write the [[CORE]] marker.\n';
+    systemPrompt += 'Core memory entries must be in Chinese (中文).\n\n';
+    systemPrompt += 'Core memory examples:\n';
     systemPrompt += userName + '的生日是X月X日，那天她不想被祝福\n';
     systemPrompt += charName + '第一次在治疗外的场合握住了她的手\n';
     systemPrompt += userName + '害怕冬天的雪，因为想起母亲离开那天\n';
@@ -6742,47 +6789,48 @@ async function triggerMemorySummaryWithTurns(turnsToSummarize) {
   var systemPrompt = '';
 
   if (state.charMeta.description) {
-    systemPrompt += '【角色设定】\n' + state.charMeta.description + '\n\n';
+    systemPrompt += '【Character Settings】\n' + state.charMeta.description + '\n\n';
   }
   if (state.coreMemory.length > 0) {
-    systemPrompt += '【核心记忆 · 绝不遗忘】\n' + state.coreMemory.map(function(e) { return '- ' + e.content; }).join('\n') + '\n\n';
+    systemPrompt += '【Core Memory · Never Forget】\n' + state.coreMemory.map(function(e) { return '- ' + e.content; }).join('\n') + '\n\n';
   }
   if (state.userMeta.description) {
-    systemPrompt += '【关于 ' + userName + '】\n' + state.userMeta.description + '\n\n';
+    systemPrompt += '【About ' + userName + '】\n' + state.userMeta.description + '\n\n';
   }
 
-  systemPrompt += '【长期记忆总结任务】\n\n';
-  systemPrompt += '你现在不是在"输出回复"，而是 ' + charName + ' 在独处时，用自己的方式记录今天与 ' + userName + ' 相处的片段。\n';
-  systemPrompt += '这份记录只有 ' + charName + ' 自己会看，语气应符合角色性格——可以真实、可以克制、可以带着未说出口的心事。\n\n';
-  systemPrompt += '【书写要求】\n';
-  systemPrompt += '1. 使用第一人称"我"，视角是 ' + charName + '，直接开始书写，不加标题、编号、引号、前缀\n';
-  systemPrompt += '2. 语气和笔触必须符合上方【角色设定】中 ' + charName + ' 的性格特征\n';
-  systemPrompt += '3. 必须涵盖以下层次（自然融入，不分点罗列）：\n';
-  systemPrompt += '   · 事件层：发生了什么、' + userName + ' 说了什么做了什么\n';
-  systemPrompt += '   · 观察层：' + charName + ' 注意到的 ' + userName + ' 的情绪/状态/言外之意\n';
-  systemPrompt += '   · 内心层：' + charName + ' 自己的真实想法、犹豫、克制\n';
-  systemPrompt += '   · 关系层：这次互动让两人关系发生了什么微妙变化\n';
-  systemPrompt += '4. 对话中的[当时状态]（地点、心情、动作、思绪等）自然融入叙述，不要照搬\n';
-  systemPrompt += '5. 表情包和图片只取其情绪意味，不描述图片本身\n';
-  systemPrompt += '6. 字数控制在 150～250 字\n';
-  systemPrompt += '7. 这是一条独立的新记忆条目，不需要承接之前的记忆\n';
-  systemPrompt += '8. 禁止使用"今天我们……，我感到……，最后……"这种流水账模板\n';
-  systemPrompt += '9. 不要过度浪漫化或戏剧化，保持角色应有的分寸感\n\n';
-
-  systemPrompt += '【书写示例】（仅参考格式和长度，不要模仿具体内容，风格必须匹配角色性格）\n';
+  systemPrompt += '[Long-Term Memory Summarization Task]\n\n';
+  systemPrompt += 'You are NOT "generating a reply" right now. Instead, ' + charName + ' is alone, recording today\'s moments with ' + userName + ' in their own way.\n';
+  systemPrompt += 'This record is only for ' + charName + '\'s own eyes. The tone should match the character\'s personality—it can be honest, restrained, or carry unspoken thoughts.\n\n';
+  systemPrompt += '[Writing Requirements]\n';
+  systemPrompt += '1. Use first person "我", from ' + charName + '\'s perspective. Start writing directly—no titles, numbering, quotes, or prefixes\n';
+  systemPrompt += '2. Tone and style MUST match ' + charName + '\'s personality from the [Character Settings] above\n';
+  systemPrompt += '3. Must cover these layers (weave them naturally, do NOT list them as bullet points):\n';
+  systemPrompt += '   · Event layer: what happened, what ' + userName + ' said or did\n';
+  systemPrompt += '   · Observation layer: ' + charName + '\'s observations of ' + userName + '\'s emotions/state/subtext\n';
+  systemPrompt += '   · Inner layer: ' + charName + '\'s true thoughts, hesitations, restraint\n';
+  systemPrompt += '   · Relationship layer: how this interaction subtly changed the relationship between them\n';
+  systemPrompt += '4. Naturally incorporate the [status at that time] (location, mood, action, thoughts, etc.) into the narrative; do not copy them verbatim\n';
+  systemPrompt += '5. For stickers and images, only extract their emotional meaning; do not describe the image itself\n';
+  systemPrompt += '6. Word count: 150–250 characters\n';
+  systemPrompt += '7. This is an independent new memory entry; it does not need to follow from previous memories\n';
+  systemPrompt += '8. Do NOT use the template pattern "Today we..., I felt..., In the end..."\n';
+  systemPrompt += '9. Do not over-romanticize or overdramatize; maintain the character\'s appropriate sense of proportion\n';
+  systemPrompt += '10. Write in Chinese (中文)\n\n';
+  systemPrompt += '[Writing Example] (reference format and length only; do NOT imitate the specific content; style must match the character\'s personality)\n';
   systemPrompt += '"今天 ' + userName + ' 提起了一件旧事，语气很轻。我没有急着回应，只是安静地陪着。有些话不需要说出口，能在场就好——至少我是这么告诉自己的。"\n\n';
 
   if (state.memorySettings.coreMemoryEnabled) {
-    systemPrompt += '\n【核心记忆提取任务】\n\n';
-    systemPrompt += '完成长期记忆后，检查本轮对话中是否出现以下类型的关键信息，符合的才提取：\n';
-    systemPrompt += '· 不可遗忘的身份信息（生日、家庭关系、重大病史、特定厌恶/喜好）\n';
-    systemPrompt += '· 双方明确的承诺或约定（包括 ' + charName + ' 答应过的事）\n';
-    systemPrompt += '· 关系性质的转折点（第一次牵手、第一次说出某个称呼、跨越某条边界等）\n';
-    systemPrompt += '· ' + userName + ' 留下的心理标记（特定的恐惧、信任的来源、安全感的开关）\n';
-    systemPrompt += '· ' + charName + ' 对自己设下的底线或做出的破例\n\n';
-    systemPrompt += '如果有，在总结文本后空一行，写"[[CORE]]"标记，每行一条，格式为简短客观陈述句（15～40字），不要用"我"字开头。\n';
-    systemPrompt += '没有则不写[[CORE]]标记。\n\n';
-    systemPrompt += '核心记忆示例：\n';
+    systemPrompt += '\n[Core Memory Extraction Task]\n\n';
+    systemPrompt += 'After completing the long-term memory, check whether any of the following types of key information appeared in this conversation. Extract only what qualifies:\n';
+    systemPrompt += '· Unforgettable identity information (birthday, family relationships, major medical history, specific likes/dislikes)\n';
+    systemPrompt += '· Explicit promises or agreements by either party (including things ' + charName + ' promised)\n';
+    systemPrompt += '· Relationship turning points (first hand-holding, first use of a certain name, crossing a boundary, etc.)\n';
+    systemPrompt += '· Psychological markers left by ' + userName + ' (specific fears, sources of trust, triggers for feeling safe)\n';
+    systemPrompt += '· Boundaries ' + charName + ' set for themselves or exceptions they made\n\n';
+    systemPrompt += 'If any qualify, after the summary text, leave a blank line, write "[[CORE]]", then one entry per line as a brief objective statement (15–40 characters). Do not start with "我".\n';
+    systemPrompt += 'If none qualify, do NOT write the [[CORE]] marker.\n';
+    systemPrompt += 'Core memory entries must be in Chinese (中文).\n\n';
+    systemPrompt += 'Core memory examples:\n';
     systemPrompt += userName + '的生日是X月X日，那天她不想被祝福\n';
     systemPrompt += charName + '第一次在治疗外的场合握住了她的手\n';
     systemPrompt += userName + '害怕冬天的雪，因为想起母亲离开那天\n';
@@ -7519,27 +7567,28 @@ async function helpReply(msgId) {
   try {
     var charName = getCharName();
     var userName = getUserName();
-    var system = '你的唯一任务：根据对话上下文和背景设定，以 ' + userName + ' 的身份写一条回复。\n\n';
+    var system = 'Your sole task: based on the conversation context and background settings, write a reply as ' + userName + '.\n\n';
     if (state.charMeta.description) {
-      system += '【角色设定（对话对象）】\n' + state.charMeta.description + '\n\n';
+      system += '[Character Settings (conversation partner)]\n' + state.charMeta.description + '\n\n';
     }
     if (state.userMeta.description) {
-      system += '【关于 ' + userName + '】\n' + state.userMeta.description + '\n\n';
+      system += '[About ' + userName + ']\n' + state.userMeta.description + '\n\n';
     }
     var helpEnabledWB = state.worldBook.filter(function(e) { return e.enabled; });
     if (helpEnabledWB.length > 0) {
-      system += '【世界观设定】\n' + helpEnabledWB.map(function(e) { return e.content; }).join('\n\n') + '\n\n';
+      system += '[World Settings]\n' + helpEnabledWB.map(function(e) { return e.content; }).join('\n\n') + '\n\n';
     }
     if (state.coreMemory.length > 0) {
-      system += '【核心记忆】\n' + state.coreMemory.slice(0, 10).map(function(e) { return '- ' + e.content; }).join('\n') + '\n\n';
+      system += '[Core Memory]\n' + state.coreMemory.slice(0, 10).map(function(e) { return '- ' + e.content; }).join('\n') + '\n\n';
     }
-    system += '铁律（违反任何一条即为失败）：\n';
-    system += '1. 直接输出回复正文，第一个字就是回复内容\n';
-    system += '2. 禁止输出任何解释、注释、前缀、后缀、括号说明\n';
-    system += '3. 禁止输出状态栏 [[STATUS]]...[[/STATUS]]\n';
-    system += '4. 使用「」包裹说出口的话，其余为动作描写\n';
-    system += '5. 控制在 30～150 字\n';
-    system += '6. 语气行为符合 ' + userName + ' 的人设和世界观设定，自然承接上文\n';
+    system += 'Iron Rules (violating any one means failure):\n';
+    system += '1. Output the reply text directly; the very first character must be part of the reply\n';
+    system += '2. Do NOT output any explanations, annotations, prefixes, suffixes, or parenthetical notes\n';
+    system += '3. Do NOT output a status bar [[STATUS]]...[[/STATUS]]\n';
+    system += '4. Wrap spoken words in「」; everything else is action description\n';
+    system += '5. Keep it between 30–150 characters\n';
+    system += '6. Tone and behavior must match ' + userName + '\'s persona and world settings, naturally continuing the conversation\n';
+    system += '7. Reply MUST be in Chinese (中文)\n';
     var nonWelcome = state.messages.filter(function(m) { return !m.isWelcome && !m.pending; });
     var recent = nonWelcome.slice(-20);
     var contextMsgs = [];
@@ -7552,7 +7601,7 @@ async function helpReply(msgId) {
         contextMsgs.push({ role: 'assistant', content: bodyText });
       }
     }
-    contextMsgs.push({ role: 'user', content: '现在直接输出 ' + userName + ' 的回复，不要有任何多余内容：' });
+    contextMsgs.push({ role: 'user', content: 'Now directly output ' + userName + '\'s reply with no extra content whatsoever. Reply in Chinese:' });
     var apiFormat = state.apiSettings.format || 'openai';
     var url = getApiEndpoint(state.apiSettings.baseUrl, apiFormat, 'chat');
     var headers = getApiHeaders(state.apiSettings.apiKey, apiFormat);
@@ -12338,16 +12387,17 @@ function refreshQuickPhraseList() {
     html += '<div class="wb-folder-header" data-qpf-toggle="' + folder.id + '">';
     html += '<svg class="wb-folder-chevron" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>';
     html += '<svg class="wb-folder-icon" viewBox="0 0 24 24"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>';
-    html += '<span class="wb-folder-name">' + escapeHtml(folder.name || '未命名') + '</span>';
+    html += '<span class="wb-folder-name">' + escapeHtml(folder.name || '未命名文件夹') + '</span>';
     html += '<span class="wb-folder-count">' + folderItems.length + '</span>';
     html += '<div class="wb-folder-actions" onclick="event.stopPropagation()">';
+    html += '<button class="btn-icon-sm" data-qpf-add="' + folder.id + '" title="添加短语到此文件夹"><svg viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg></button>';
     html += '<button class="btn-icon-sm" data-qpf-rename="' + folder.id + '" title="重命名"><svg viewBox="0 0 24 24"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/></svg></button>';
     html += '<button class="btn-icon-sm" data-qpf-del="' + folder.id + '" title="删除文件夹"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>';
     html += '</div></div>';
     html += '<div class="wb-folder-body">';
 
     if (folderItems.length === 0) {
-      html += '<div class="wb-folder-empty">文件夹为空，可通过条目的标签按钮移入</div>';
+      html += '<div class="wb-folder-empty">文件夹为空，点击 + 添加短语或通过条目的标签按钮移入</div>';
     } else {
       for (var ki = 0; ki < folderItems.length; ki++) {
         html += buildQpItemHTML(folderItems[ki]);
@@ -12365,8 +12415,11 @@ function refreshQuickPhraseList() {
 }
 
 function buildQpItemHTML(phrase) {
+  var preview = phrase.content || '';
+  if (preview.length > 30) preview = preview.slice(0, 30) + '...';
   return '<div class="qp-item" data-qp-id="' + phrase.id + '">' +
     '<span class="qp-title">' + escapeHtml(phrase.title) + '</span>' +
+    '<span class="qp-preview">' + escapeHtml(preview) + '</span>' +
     '<button class="btn-icon-sm" data-qp-expand="' + phrase.id + '" title="展开/收起"><svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></button>' +
     '<button class="btn-icon-sm" data-qp-tag="' + phrase.id + '" title="移入文件夹"><svg viewBox="0 0 24 24"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg></button>' +
     '<button class="btn-icon-sm" data-qp-del="' + phrase.id + '" title="删除"><svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></button>' +
@@ -12380,6 +12433,35 @@ function bindQpListEvents(listEl) {
       var folderId = el.dataset.qpfToggle;
       var folderEl = listEl.querySelector('[data-qpf-id="' + folderId + '"]');
       if (folderEl) folderEl.classList.toggle('open');
+    });
+  });
+
+  // 文件夹内新建短语
+  listEl.querySelectorAll('[data-qpf-add]').forEach(function(btn) {
+    btn.addEventListener('click', async function(e) {
+      e.stopPropagation();
+      var folderId = btn.dataset.qpfAdd;
+      var folder = (state.quickPhraseFolders || []).find(function(f) { return f.id === folderId; });
+      if (!folder) return;
+      var title = await showPrompt('新建短语 - 标题', '', { placeholder: '胶囊栏显示的标题（简短）' });
+      if (title === null) return;
+      title = title.trim();
+      if (!title) { showToast('标题不能为空', 'warning'); return; }
+      var content = await showPrompt('新建短语 - 内容', '', { placeholder: '点击胶囊后填入输入框的文字', multiline: true });
+      if (content === null) return;
+      content = content.trim();
+      if (!content) { showToast('内容不能为空', 'warning'); return; }
+      var phrase = { id: genId('qp'), title: title, content: content, createdAt: Date.now() };
+      state.quickPhrases.push(phrase);
+      if (!folder.items) folder.items = [];
+      folder.items.push(phrase.id);
+      await saveQuickPhrases();
+      refreshQuickPhraseList();
+      renderQuickPhraseBar();
+      // 自动展开该文件夹
+      var folderEl = listEl.querySelector('[data-qpf-id="' + folderId + '"]');
+      if (folderEl) folderEl.classList.add('open');
+      showToast('短语已添加到「' + folder.name + '」', 'success');
     });
   });
 
@@ -12469,7 +12551,6 @@ function bindQpListEvents(listEl) {
         '</div>';
       item.appendChild(editor);
 
-      // 保存按钮
       editor.querySelector('[data-qp-edit-save]').addEventListener('click', async function() {
         var titleInput = editor.querySelector('[data-qp-edit-title]');
         var contentInput = editor.querySelector('[data-qp-edit-content]');
@@ -12485,7 +12566,6 @@ function bindQpListEvents(listEl) {
         showToast('已更新', 'success');
       });
 
-      // 取消按钮
       editor.querySelector('[data-qp-edit-cancel]').addEventListener('click', function() {
         editor.remove();
         item.classList.remove('qp-has-editor');
