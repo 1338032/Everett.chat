@@ -1685,6 +1685,181 @@ a { color:inherit; text-decoration:none; }
   background:rgba(197,48,48,0.08);
 }
 /* ══════════════════════════════════════════════════════
+   全局时间侧边栏
+   ══════════════════════════════════════════════════════ */
+#time-sidebar-btn {
+  position:fixed;
+  right:0;
+  top:50%;
+  transform:translateY(-50%);
+  z-index:88;
+  width:32px;
+  height:56px;
+  border-radius:var(--radius-md) 0 0 var(--radius-md);
+  background:var(--bg-surface);
+  border:1px solid var(--border);
+  border-right:none;
+  box-shadow:var(--shadow-sm);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  transition:background 150ms, width 150ms;
+}
+#time-sidebar-btn:hover { background:var(--bg-hover); }
+#time-sidebar-btn svg {
+  width:18px; height:18px;
+  stroke:var(--pine); stroke-width:1.5; fill:none;
+}
+[data-frosted="true"] #time-sidebar-btn {
+  background:color-mix(in srgb, var(--bg-surface) 55%, transparent) !important;
+  backdrop-filter:blur(20px) saturate(1.4) !important;
+  -webkit-backdrop-filter:blur(20px) saturate(1.4) !important;
+}
+
+#time-sidebar-panel {
+  position:fixed;
+  right:-300px;
+  top:50%;
+  transform:translateY(-50%);
+  z-index:130;
+  width:280px;
+  max-height:70vh;
+  background:var(--bg-overlay);
+  border:1px solid var(--border);
+  border-right:none;
+  border-radius:var(--radius-lg) 0 0 var(--radius-lg);
+  box-shadow:var(--shadow-md);
+  display:flex;
+  flex-direction:column;
+  transition:right 300ms cubic-bezier(0.4,0,0.2,1);
+  overflow:hidden;
+}
+#time-sidebar-panel.open { right:0; }
+[data-frosted="true"] #time-sidebar-panel {
+  background:color-mix(in srgb, var(--bg-overlay) 65%, transparent) !important;
+  backdrop-filter:blur(20px) saturate(1.4) !important;
+  -webkit-backdrop-filter:blur(20px) saturate(1.4) !important;
+}
+#time-sidebar-overlay {
+  position:fixed; inset:0; z-index:129;
+  background:rgba(0,0,0,0.15);
+  opacity:0; pointer-events:none;
+  transition:opacity 250ms ease;
+}
+#time-sidebar-overlay.open { opacity:1; pointer-events:auto; }
+
+.time-panel-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px 16px 10px;
+  border-bottom:1px solid var(--border);
+  flex-shrink:0;
+}
+.time-panel-header h3 {
+  font:500 15px/1 'Noto Serif SC', serif;
+  color:var(--text-primary);
+  display:flex; align-items:center; gap:6px;
+}
+.time-panel-header h3 svg {
+  width:16px; height:16px; stroke:var(--pine); stroke-width:1.5; fill:none;
+}
+.time-panel-body {
+  flex:1; overflow-y:auto; padding:14px 16px 16px;
+}
+.time-current-display {
+  text-align:center;
+  padding:16px 12px;
+  background:var(--bg-input);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  margin-bottom:14px;
+}
+.time-current-date {
+  font-size:22px;
+  font-weight:500;
+  color:var(--text-primary);
+  letter-spacing:0.06em;
+  font-family:'Noto Serif SC', serif;
+}
+.time-current-weekday {
+  font-size:12px;
+  color:var(--text-muted);
+  margin-top:4px;
+}
+.time-calendar-row {
+  display:flex; align-items:center; gap:8px;
+  margin-bottom:12px;
+}
+.time-calendar-row label {
+  font-size:13px; color:var(--text-secondary);
+  min-width:28px; flex-shrink:0;
+}
+.time-calendar-row input[type="date"] {
+  flex:1;
+  padding:8px 10px;
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--bg-input);
+  font-size:14px;
+  color:var(--text-primary);
+  font-family:var(--font-family);
+  transition:border-color 150ms, box-shadow 150ms;
+}
+.time-calendar-row input[type="date"]:focus {
+  outline:none;
+  border-color:var(--pine-ring);
+  box-shadow:0 0 0 3px var(--pine-ring);
+}
+.time-quick-btns {
+  display:flex; gap:6px; flex-wrap:wrap;
+  margin-bottom:14px;
+}
+.time-quick-btn {
+  padding:5px 12px;
+  border-radius:var(--radius-full);
+  font-size:12px;
+  border:1px solid var(--border);
+  background:var(--bg-surface);
+  color:var(--text-secondary);
+  cursor:pointer;
+  transition:background 150ms, border-color 150ms;
+}
+.time-quick-btn:hover { background:var(--bg-hover); border-color:var(--text-muted); }
+.time-quick-btn:active { transform:scale(0.95); }
+.time-log-section {
+  border-top:1px solid var(--border);
+  padding-top:12px;
+  margin-top:4px;
+}
+.time-log-title {
+  font-size:12px; color:var(--text-muted);
+  margin-bottom:8px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.time-log-list {
+  max-height:150px; overflow-y:auto;
+}
+.time-log-item {
+  display:flex; align-items:center; gap:6px;
+  padding:4px 0;
+  font-size:12px;
+  color:var(--text-secondary);
+  border-bottom:1px solid var(--border);
+}
+.time-log-item:last-child { border-bottom:none; }
+.time-log-item .tl-arrow {
+  color:var(--pine); font-weight:500; flex-shrink:0;
+}
+.time-log-item .tl-reason {
+  color:var(--text-muted); font-style:italic;
+  flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.time-log-empty {
+  font-size:12px; color:var(--text-muted);
+  text-align:center; padding:12px 0;
+  font-style:italic;
+}
+/* ══════════════════════════════════════════════════════
    快捷短语胶囊栏
    ══════════════════════════════════════════════════════ */
 #quick-phrase-bar {
@@ -2347,6 +2522,51 @@ a { color:inherit; text-decoration:none; }
   <button id="scroll-bottom-btn" title="回到底部">
     <svg viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg>
   </button>
+  <!-- 全局时间侧边栏 -->
+<button id="time-sidebar-btn" title="时间设定">
+  <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+</button>
+<div id="time-sidebar-overlay"></div>
+<div id="time-sidebar-panel">
+  <div class="time-panel-header">
+    <h3>
+  <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+  时间设定
+</h3>
+    <button class="panel-close" id="time-sidebar-close">
+      <svg viewBox="0 0 24 24"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+  <div class="time-panel-body">
+    <div class="time-current-display">
+      <div class="time-current-date" id="time-display-date">2025/01/01</div>
+      <div class="time-current-weekday" id="time-display-weekday">星期三</div>
+    </div>
+    <div class="time-calendar-row">
+      <label>日期</label>
+      <input type="date" id="time-date-picker">
+    </div>
+    <div class="time-quick-btns">
+      <button class="time-quick-btn" data-time-add="1">+1天</button>
+      <button class="time-quick-btn" data-time-add="2">+2天</button>
+      <button class="time-quick-btn" data-time-add="3">+3天</button>
+      <button class="time-quick-btn" data-time-add="7">+1周</button>
+      <button class="time-quick-btn" data-time-add="30">+1月</button>
+      <button class="time-quick-btn" data-time-add="-1">-1天</button>
+    </div>
+    <div class="time-log-section">
+      <div class="time-log-title">
+        <span>时间变更记录</span>
+        <button class="btn-icon-sm" id="btn-clear-time-log" title="清空记录">
+          <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+        </button>
+      </div>
+      <div class="time-log-list" id="time-log-list">
+        <div class="time-log-empty">暂无变更记录</div>
+      </div>
+    </div>
+  </div>
+</div>
   <!-- 快捷短语胶囊栏 -->
 <div id="quick-phrase-bar">
   <div id="quick-phrase-scroll"></div>
@@ -3629,6 +3849,7 @@ class XWADatabase {
       emojis: await this.getEmojis(),
       favorites: await this.getFavorites(),
       books: await this.getBooks(),
+      global_time: await this.getSetting('global_time') || { date: null, logs: [] },
       settings: await this.getAllSettings(),
       blobs: {}
     };
@@ -3676,6 +3897,9 @@ data.blobs[key] = { base64: b64, mimeType: row.mimeType };
     }
     if (data.wb_folders) {
       await this.saveWorldBookFolders(data.wb_folders);
+    }
+    if (data.global_time) {
+      await this.setSetting('global_time', data.global_time);
     }
     if (data.quick_phrase_folders) {
       await this.setSetting('quick_phrase_folders', data.quick_phrase_folders);
@@ -3873,6 +4097,17 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str;
   return div.innerHTML;
+}
+function getMsgTimeDisplay(timestamp) {
+  if (!timestamp) return '';
+  if (state.apiSettings.enableRealTime) {
+    return formatTimestamp(timestamp);
+  }
+  var globalDate = getGlobalDateFormatted();
+  var d = new Date(timestamp);
+  var h = String(d.getHours()).padStart(2, '0');
+  var mi = String(d.getMinutes()).padStart(2, '0');
+  return globalDate + ' ' + h + ':' + mi;
 }
 function formatTimestamp(ts) {
   var d = new Date(ts);
@@ -4209,11 +4444,14 @@ function renderMessageElement(msg, prevMsg) {
         '<button class="ver-btn ver-next" data-ver-msg="' + msg.id + '" data-ver-dir="next"' + (curVer >= msg.versions.length - 1 ? ' disabled' : '') + '><svg viewBox="0 0 24 24"><polyline points="9 6 15 12 9 18"/></svg></button>';
       content.appendChild(verBar);
     }
-    if (state.apiSettings.enableRealTime && msg.timestamp) {
-      const ts = document.createElement('div');
-      ts.className = 'msg-timestamp';
-      ts.textContent = formatTimestamp(msg.timestamp);
-      content.appendChild(ts);
+    if (msg.timestamp && !msg.isWelcome) {
+      var tsText = getMsgTimeDisplay(msg.timestamp);
+      if (tsText) {
+        var ts = document.createElement('div');
+        ts.className = 'msg-timestamp';
+        ts.textContent = tsText;
+        content.appendChild(ts);
+      }
     }
   } else {
         if (msg.isImageOnly && msg.imageRefs && msg.imageRefs.length > 0) {
@@ -4270,13 +4508,16 @@ function renderMessageElement(msg, prevMsg) {
       userContent.appendChild(uActionBar);
     }
   }
-  if (msg.role === 'user' && state.apiSettings.enableRealTime && msg.timestamp) {
-    const userContent = block.querySelector('.user-content');
-    if (userContent) {
-      const ts = document.createElement('div');
-      ts.className = 'msg-timestamp';
-      ts.textContent = formatTimestamp(msg.timestamp);
-      userContent.appendChild(ts);
+  if (msg.role === 'user' && msg.timestamp) {
+    var userContentTs = block.querySelector('.user-content');
+    if (userContentTs) {
+      var tsText2 = getMsgTimeDisplay(msg.timestamp);
+      if (tsText2) {
+        var ts2 = document.createElement('div');
+        ts2.className = 'msg-timestamp';
+        ts2.textContent = tsText2;
+        userContentTs.appendChild(ts2);
+      }
     }
   }
 
@@ -4546,10 +4787,20 @@ function updateStatusBar(status) {
     timeEl.textContent = '更新于 ' + d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
   }
 
-  // 如果开启真实时间感知，用真实时间覆盖AI输出的时间
+  // 强制使用全局日期覆盖状态栏的年月日
   if (state.apiSettings.enableRealTime) {
     var rtTimeEl = document.getElementById('sv-time');
     if (rtTimeEl) rtTimeEl.textContent = formatTimestamp(Date.now());
+  } else if (state.globalTime.date && status['时间']) {
+    var gtDateStr = getGlobalDateFormatted();
+    // 提取 AI 输出的 HH:MM 部分
+    var timeFieldVal = status['时间'];
+    var hhmmMatch = timeFieldVal.match(/(\d{1,2}:\d{2})/);
+    var hhmm = hhmmMatch ? hhmmMatch[1] : '';
+    var correctedTime = gtDateStr + (hhmm ? ' ' + hhmm : '');
+    status['时间'] = correctedTime;
+    var svTimeEl2 = document.getElementById('sv-time');
+    if (svTimeEl2) svTimeEl2.textContent = correctedTime;
   }
 
 // 切换按钮不显示文字，仅用箭头图标
@@ -4830,10 +5081,11 @@ async function regenerateStatusBar(userRequirement) {
   if (api.enableRealTime) {
     timeHint = 'Current real time is ' + formatTimestamp(Date.now()) + '. The status bar time MUST match real time.';
   } else {
+    var gtDate = getGlobalDateFormatted();
+    timeHint = 'The date is FIXED as ' + gtDate + '. You MUST use this exact date. Only output the HH:MM portion naturally.';
     if (state.lastStatus && state.lastStatus['时间']) {
-      timeHint = 'Previous status bar time was "' + state.lastStatus['时间'] + '". Set time based on this (may keep unchanged or advance slightly).';
-    } else {
-      timeHint = 'Set time reasonably based on the conversation context.';
+      var prevHHMM = (state.lastStatus['时间'] || '').replace(/^[\d/]+\s*/, '');
+      if (prevHHMM) timeHint += ' Previous HH:MM was ' + prevHHMM + '.';
     }
   }
 
@@ -5448,6 +5700,8 @@ async function sendMessage() {
   }
 
   appendMessageElement(msg);
+  // 检测时间跳跃关键词
+  checkAndAdvanceTime(text, 'user');
   input.value = '';
   autoResizeInput();
   updateSendButton();
@@ -5561,25 +5815,34 @@ Core Rules:
   }
 
   // [7] Time System
+  var globalDateStr = getGlobalDateFormatted();
   if (state.apiSettings.enableRealTime) {
-    system += `[Time System · Real Time]
-Current: ${formatTimestamp(Date.now())}
-- User messages contain real timestamps in brackets; use them as the reference
-- The "时间" field in [[STATUS]] must match real time (±5 minutes)
-- Infer weather, lighting, and natural changes accordingly\n\n`;
+    system += '[Time System · Real Time]\nCurrent: ' + formatTimestamp(Date.now()) + '\n';
+    system += '- Every message has a real timestamp in [YYYY/MM/DD HH:MM] brackets\n';
+    system += '- The "时间" field in [[STATUS]] must match real time (±5 minutes)\n';
+    system += '- Infer weather, lighting, and natural changes accordingly\n\n';
   } else {
     var lastTimeValue = '';
     if (state.lastStatus && state.lastStatus['时间']) {
       lastTimeValue = state.lastStatus['时间'];
     }
-    system += `[Time System · Virtual Time]
-- Time is set by you based on the story; it is unrelated to reality
-- Each reply should naturally advance time from the previous value (a few minutes to a couple of hours)
-- Do NOT jump more than half a day without clear justification; do NOT reverse time`;
+    system += '[Time System · Fixed Date + Natural Time Flow]\n';
+    system += 'FIXED DATE (managed externally, NOT by you): ' + globalDateStr + '\n';
+    system += '- Every message has a virtual timestamp in [YYYY/MM/DD HH:MM] brackets showing when it was sent\n';
+    system += 'IRON RULES for the 时间 field in [[STATUS]]:\n';
+    system += '1. The date portion MUST be exactly "' + globalDateStr + '" — you MUST NOT change the year, month, or day under any circumstances\n';
+    system += '2. You only control the HH:MM portion — let it flow naturally based on the conversation (a few minutes to a couple hours)\n';
+    system += '3. Format: ' + globalDateStr + ' HH:MM\n';
+    system += '4. Do NOT advance the date even if the story implies time passing across days — the date is controlled externally\n';
+    system += '5. Refer to the timestamps on each message to understand the pace of conversation\n';
     if (lastTimeValue) {
-      system += `\n- Previous time was "${lastTimeValue}"`;
+      // 提取上次的 HH:MM 供参考
+      var lastHHMM = lastTimeValue.replace(/^[\d/]+\s*/, '');
+      if (lastHHMM) {
+        system += '5. Previous time was "' + lastTimeValue + '" — your new HH:MM should naturally progress from ' + lastHHMM + '\n';
+      }
     }
-    system += `\n\n`;
+    system += '\n';
   }
 
   // [7.5] Shared Reading
@@ -5666,8 +5929,11 @@ function buildMessages() {
   for (const msg of recent) {
     if (msg.role === 'user') {
       let textContent = msg.userText || msg.rawText;
-      if (state.apiSettings.enableRealTime && msg.timestamp) {
-        textContent = '[' + formatTimestamp(msg.timestamp) + ']\n' + textContent;
+      if (msg.timestamp) {
+        var msgTimeStr = getMsgTimeDisplay(msg.timestamp);
+        if (msgTimeStr) {
+          textContent = '[' + msgTimeStr + ']\n' + textContent;
+        }
       }
       var hasImages = msg.imageRefs && msg.imageRefs.length > 0;
       var hasEmojiImages = msg.emojiRefs && msg.emojiRefs.length > 0;
@@ -5702,8 +5968,11 @@ function buildMessages() {
       }
     } else {
       let content = (msg.rawText || '').replace(/\[\[STATUS\]\][\s\S]*?\[\[\/STATUS\]\]/, '').trim();
-      if (state.apiSettings.enableRealTime && msg.timestamp) {
-        content = '[' + formatTimestamp(msg.timestamp) + ']\n' + content;
+      if (msg.timestamp) {
+        var msgTimeStr2 = getMsgTimeDisplay(msg.timestamp);
+        if (msgTimeStr2) {
+          content = '[' + msgTimeStr2 + ']\n' + content;
+        }
       }
       apiMessages.push({ role: 'assistant', content: content });
     }
@@ -5997,6 +6266,8 @@ async function receiveReply() {
       state.messages.push(replyMsg);
       try { await db.addMessage(replyMsg); } catch (err) { showToast('保存回复失败: ' + err.message, 'error'); }
       appendMessageElement(replyMsg);
+      // 检测AI回复中的时间跳跃
+      checkAndAdvanceTime(replyMsg.rawText, 'assistant');
       scrollToBottom();
       // 处理重回版本数据
       if (state._regenVersionData) {
@@ -6391,6 +6662,8 @@ async function receiveReply() {
 
     scrollToBottom();
 
+    // 检测AI回复中的时间跳跃
+    checkAndAdvanceTime(replyMsg.rawText, 'assistant');
     // 检查记忆触发
     await checkMemoryTrigger();
 
@@ -6557,7 +6830,7 @@ async function checkMemoryTrigger() {
   if (trigger <= 0 || totalAssistantTurns <= 0) return;
 
   var lastSummaryTurn = state.memorySettings._lastSummaryTurn || 0;
-  var sinceLast = totalAssistantTurns - lastSummaryTurn;
+  var sinceLast = Math.max(0, totalAssistantTurns - lastSummaryTurn);
 
   // 累计未总结轮数 >= 触发阈值时才触发
   if (sinceLast < trigger) return;
@@ -6603,6 +6876,7 @@ async function triggerMemorySummary() {
   if (toSummarize.length === 0) return;
 
   var dialogText = '';
+  var summaryCoveredStatuses = [];
   for (var i = 0; i < toSummarize.length; i++) {
     var m = toSummarize[i];
     if (m.role === 'user') {
@@ -6617,16 +6891,33 @@ async function triggerMemorySummary() {
       dialogText += charName + '：' + body + '\n';
       if (m.status) {
         var statusParts = [];
-        if (m.status['地点']) statusParts.push('地点：' + m.status['地点']);
-        if (m.status['心情']) statusParts.push('心情：' + m.status['心情']);
-        if (m.status['动作']) statusParts.push('动作：' + m.status['动作']);
-        if (m.status['思绪']) statusParts.push('思绪：' + m.status['思绪']);
-        if (m.status['健康']) statusParts.push('健康：' + m.status['健康']);
-        if (m.status['衣着']) statusParts.push('衣着：' + m.status['衣着']);
+        var statusFields = ['时间', '地点', '天气', '衣着', '健康', '动作', '心情', '思绪'];
+        for (var sf = 0; sf < statusFields.length; sf++) {
+          if (m.status[statusFields[sf]]) statusParts.push(statusFields[sf] + '：' + m.status[statusFields[sf]]);
+        }
         if (statusParts.length > 0) {
           dialogText += '  [当时状态] ' + statusParts.join('｜') + '\n';
+          summaryCoveredStatuses.push(m.status);
         }
       }
+    }
+  }
+  // 附加时间变更记录
+  var timeLogsInRange = [];
+  if (state.globalTime.logs && toSummarize.length > 0) {
+    var rangeStart = toSummarize[0].timestamp || 0;
+    var rangeEnd = toSummarize[toSummarize.length - 1].timestamp || Date.now();
+    for (var tli = 0; tli < state.globalTime.logs.length; tli++) {
+      var tlog = state.globalTime.logs[tli];
+      if (tlog.timestamp >= rangeStart && tlog.timestamp <= rangeEnd) {
+        timeLogsInRange.push(tlog);
+      }
+    }
+  }
+  if (timeLogsInRange.length > 0) {
+    dialogText += '\n[此段期间的时间变更记录]\n';
+    for (var tlj = 0; tlj < timeLogsInRange.length; tlj++) {
+      dialogText += timeLogsInRange[tlj].from.replace(/-/g, '/') + ' → ' + timeLogsInRange[tlj].to.replace(/-/g, '/') + '（' + (timeLogsInRange[tlj].reason || '') + '）\n';
     }
   }
 
@@ -6646,7 +6937,7 @@ async function triggerMemorySummary() {
   systemPrompt += 'You are NOT "generating a reply" right now. Instead, ' + charName + ' is alone, recording today\'s moments with ' + userName + ' in their own way.\n';
   systemPrompt += 'This record is only for ' + charName + '\'s own eyes. The tone should match the character\'s personality—it can be honest, restrained, or carry unspoken thoughts.\n\n';
   systemPrompt += '[Writing Requirements]\n';
-  systemPrompt += '1. Use first person "我", from ' + charName + '\'s perspective. Start writing directly—no titles, numbering, quotes, or prefixes\n';
+  systemPrompt += '1. The first line must be the date range covered by this conversation, format: YYYY/M/D or YYYY/M/D-YYYY/M/D (for multi-day). Then a blank line, then the memory text using first person "我", from ' + charName + '\'s perspective. Start writing directly—no titles, numbering, quotes, or prefixes after the date line\n';
   systemPrompt += '2. Tone and style MUST match ' + charName + '\'s personality from the [Character Settings] above\n';
   systemPrompt += '3. Must cover these layers (weave them naturally, do NOT list them as bullet points):\n';
   systemPrompt += '   · Event layer: what happened, what ' + userName + ' said or did\n';
@@ -6661,7 +6952,7 @@ async function triggerMemorySummary() {
   systemPrompt += '9. Do not over-romanticize or overdramatize; maintain the character\'s appropriate sense of proportion\n';
   systemPrompt += '10. Write in Chinese (中文)\n\n';
   systemPrompt += '[Writing Example] (reference format and length only; do NOT imitate the specific content; style must match the character\'s personality)\n';
-  systemPrompt += '"今天 ' + userName + ' 提起了一件旧事，语气很轻。我没有急着回应，只是安静地陪着。有些话不需要说出口，能在场就好——至少我是这么告诉自己的。"\n\n';
+  systemPrompt += '"2026/6/18\n\n今天下午回家，' + userName + '像往常一样打了个招呼。我没有说太多，但心里松了口气——至少今天，一切如常。"\n\n';
 
   if (state.memorySettings.coreMemoryEnabled) {
     systemPrompt += '\n[Core Memory Extraction Task]\n\n';
@@ -6759,6 +7050,7 @@ async function triggerMemorySummaryWithTurns(turnsToSummarize) {
   if (toSummarize.length === 0) return false;
 
   var dialogText = '';
+  var summaryCoveredStatuses = [];
   for (var i = 0; i < toSummarize.length; i++) {
     var m = toSummarize[i];
     if (m.role === 'user') {
@@ -6773,16 +7065,33 @@ async function triggerMemorySummaryWithTurns(turnsToSummarize) {
       dialogText += charName + '：' + body + '\n';
       if (m.status) {
         var statusParts = [];
-        if (m.status['地点']) statusParts.push('地点：' + m.status['地点']);
-        if (m.status['心情']) statusParts.push('心情：' + m.status['心情']);
-        if (m.status['动作']) statusParts.push('动作：' + m.status['动作']);
-        if (m.status['思绪']) statusParts.push('思绪：' + m.status['思绪']);
-        if (m.status['健康']) statusParts.push('健康：' + m.status['健康']);
-        if (m.status['衣着']) statusParts.push('衣着：' + m.status['衣着']);
+        var statusFields = ['时间', '地点', '天气', '衣着', '健康', '动作', '心情', '思绪'];
+        for (var sf = 0; sf < statusFields.length; sf++) {
+          if (m.status[statusFields[sf]]) statusParts.push(statusFields[sf] + '：' + m.status[statusFields[sf]]);
+        }
         if (statusParts.length > 0) {
           dialogText += '  [当时状态] ' + statusParts.join('｜') + '\n';
+          summaryCoveredStatuses.push(m.status);
         }
       }
+    }
+  }
+  // 附加时间变更记录
+  var timeLogsInRange = [];
+  if (state.globalTime.logs && toSummarize.length > 0) {
+    var rangeStart = toSummarize[0].timestamp || 0;
+    var rangeEnd = toSummarize[toSummarize.length - 1].timestamp || Date.now();
+    for (var tli = 0; tli < state.globalTime.logs.length; tli++) {
+      var tlog = state.globalTime.logs[tli];
+      if (tlog.timestamp >= rangeStart && tlog.timestamp <= rangeEnd) {
+        timeLogsInRange.push(tlog);
+      }
+    }
+  }
+  if (timeLogsInRange.length > 0) {
+    dialogText += '\n[此段期间的时间变更记录]\n';
+    for (var tlj = 0; tlj < timeLogsInRange.length; tlj++) {
+      dialogText += timeLogsInRange[tlj].from.replace(/-/g, '/') + ' → ' + timeLogsInRange[tlj].to.replace(/-/g, '/') + '（' + (timeLogsInRange[tlj].reason || '') + '）\n';
     }
   }
 
@@ -6802,7 +7111,7 @@ async function triggerMemorySummaryWithTurns(turnsToSummarize) {
   systemPrompt += 'You are NOT "generating a reply" right now. Instead, ' + charName + ' is alone, recording today\'s moments with ' + userName + ' in their own way.\n';
   systemPrompt += 'This record is only for ' + charName + '\'s own eyes. The tone should match the character\'s personality—it can be honest, restrained, or carry unspoken thoughts.\n\n';
   systemPrompt += '[Writing Requirements]\n';
-  systemPrompt += '1. Use first person "我", from ' + charName + '\'s perspective. Start writing directly—no titles, numbering, quotes, or prefixes\n';
+  systemPrompt += '1. The first line must be the date range covered by this conversation, format: YYYY/M/D or YYYY/M/D-YYYY/M/D (for multi-day). Then a blank line, then the memory text using first person "我", from ' + charName + '\'s perspective. Start writing directly—no titles, numbering, quotes, or prefixes after the date line\n';
   systemPrompt += '2. Tone and style MUST match ' + charName + '\'s personality from the [Character Settings] above\n';
   systemPrompt += '3. Must cover these layers (weave them naturally, do NOT list them as bullet points):\n';
   systemPrompt += '   · Event layer: what happened, what ' + userName + ' said or did\n';
@@ -6817,7 +7126,7 @@ async function triggerMemorySummaryWithTurns(turnsToSummarize) {
   systemPrompt += '9. Do not over-romanticize or overdramatize; maintain the character\'s appropriate sense of proportion\n';
   systemPrompt += '10. Write in Chinese (中文)\n\n';
   systemPrompt += '[Writing Example] (reference format and length only; do NOT imitate the specific content; style must match the character\'s personality)\n';
-  systemPrompt += '"今天 ' + userName + ' 提起了一件旧事，语气很轻。我没有急着回应，只是安静地陪着。有些话不需要说出口，能在场就好——至少我是这么告诉自己的。"\n\n';
+  systemPrompt += '"2026/6/18\n\n今天下午回家，' + userName + '像往常一样打了个招呼。我没有说太多，但心里松了口气——至少今天，一切如常。"\n\n';
 
   if (state.memorySettings.coreMemoryEnabled) {
     systemPrompt += '\n[Core Memory Extraction Task]\n\n';
@@ -6985,13 +7294,16 @@ function showMemorySummaryConfirm(summary, coreLines, coveredMessages) {
         try { await db.addLongTermMemory(ltEntry); } catch (_) {}
       }
 
-      // 写入核心记忆
-      for (var wci = 0; wci < editedCoreLines.length; wci++) {
-        var coreText = editedCoreLines[wci];
+      // 写入核心记忆（合并为一个条目）
+      if (editedCoreLines.length > 0) {
+        var combinedCoreContent = editedCoreLines.join('\n');
+        var coreTitle = editedCoreLines[0];
+        if (coreTitle.length > 15) coreTitle = coreTitle.slice(0, 15) + '...';
+        if (editedCoreLines.length > 1) coreTitle += '（+' + (editedCoreLines.length - 1) + '条）';
         var coreEntry = {
           id: genId('core'),
-          title: coreText.length > 15 ? coreText.slice(0, 15) + '...' : coreText,
-          content: coreText,
+          title: coreTitle,
+          content: combinedCoreContent,
           weight: 1.0,
           createdAt: Date.now(),
           updatedAt: Date.now()
@@ -10550,6 +10862,7 @@ async function clearAllData() {
     state.books = [];
     state.quickPhrases = [];
     state.quickPhraseFolders = [];
+    state.globalTime = { date: null, logs: [] };
     state.readerState.currentBookId = null;
     var readerEl = document.getElementById('reader-float');
     if (readerEl) readerEl.classList.remove('open', 'zoomed');
@@ -10608,6 +10921,8 @@ async function clearAllMessages() {
     await db._txComplete(tx);
     state.messages = [];
     state.pendingMessages = [];
+    state.globalTime.logs = [];
+    try { await saveGlobalTime(); } catch (_) {}
     state.lastStatus = null;
     state.lastStatus = null;
     // 顺便重置记忆计数器，避免污染残留
@@ -11081,6 +11396,16 @@ setSplashProgress(75);
     if (savedFontPresets) state.fontPresets = savedFontPresets;
     if (savedPresets) state.apiPresets = savedPresets;
     try { await loadQuickPhrases(); } catch (_) {}
+    try {
+      await loadGlobalTime();
+    } catch (_) {
+      if (!state.globalTime.date) {
+        var today = new Date();
+        state.globalTime.date = today.getFullYear() + '-' +
+          String(today.getMonth() + 1).padStart(2, '0') + '-' +
+          String(today.getDate()).padStart(2, '0');
+      }
+    }
 setSplashProgress(90);
     // 恢复最后状态
     for (let i = state.messages.length - 1; i >= 0; i--) {
@@ -11472,8 +11797,19 @@ document.addEventListener('DOMContentLoaded', () => {
     var on = !this.classList.contains('on');
     this.classList.toggle('on', on);
     state.apiSettings.enableRealTime = on;
+    if (on) {
+      var now = new Date();
+      state.globalTime.date = now.getFullYear() + '-' +
+        String(now.getMonth() + 1).padStart(2, '0') + '-' +
+        String(now.getDate()).padStart(2, '0');
+      saveGlobalTime();
+    }
     scheduleApiSave();
     renderAllMessages();
+    updateTimeSidebarDisplay();
+    if (state.lastStatus) {
+      updateStatusBar(state.lastStatus);
+    }
   });
   // 页面设置
   document.querySelectorAll('input[name="fontFamily"]').forEach(radio => {
@@ -11928,6 +12264,28 @@ document.addEventListener('DOMContentLoaded', () => {
   // 聊天记录搜索
   document.getElementById('chat-search-input').addEventListener('input', function(e) {
     handleChatSearch(e.target.value);
+  });
+  // 全局时间侧边栏
+  document.getElementById('time-sidebar-btn').addEventListener('click', openTimeSidebar);
+  document.getElementById('time-sidebar-overlay').addEventListener('click', closeTimeSidebar);
+  document.getElementById('time-sidebar-close').addEventListener('click', closeTimeSidebar);
+  document.getElementById('time-date-picker').addEventListener('change', function(e) {
+    var val = e.target.value;
+    if (val) setGlobalDate(val, '手动选择');
+  });
+  document.querySelectorAll('[data-time-add]').forEach(function(btn) {
+    btn.addEventListener('click', function() {
+      var days = parseInt(btn.dataset.timeAdd);
+      if (!isNaN(days)) addGlobalDays(days);
+    });
+  });
+  document.getElementById('btn-clear-time-log').addEventListener('click', async function() {
+    var confirmed = await showConfirm('确认清空所有时间变更记录？');
+    if (!confirmed) return;
+    state.globalTime.logs = [];
+    await saveGlobalTime();
+    renderTimeLog();
+    showToast('记录已清空', 'success');
   });
 // 快捷短语
   document.getElementById('btn-add-phrase').addEventListener('click', addQuickPhrase);
@@ -12697,7 +13055,206 @@ function closeQpTagMenu() {
   if (overlay) overlay.remove();
   if (menu) menu.remove();
 }
+// ══════════════════════════════════════════════════════
+// 全局时间系统
+// ══════════════════════════════════════════════════════
+state.globalTime = {
+  date: null, // 'YYYY-MM-DD' 格式
+  logs: []    // [{from, to, reason, timestamp}]
+};
 
+function getGlobalDateStr() {
+  if (!state.globalTime.date) return '';
+  return state.globalTime.date.replace(/-/g, '/');
+}
+
+function getGlobalDateFormatted() {
+  if (!state.globalTime.date) {
+    var today = new Date();
+    var y = today.getFullYear();
+    var m = String(today.getMonth() + 1).padStart(2, '0');
+    var d = String(today.getDate()).padStart(2, '0');
+    return y + '/' + m + '/' + d;
+  }
+  var parts = state.globalTime.date.split('-');
+  return parts[0] + '/' + parts[1] + '/' + parts[2];
+}
+
+function getWeekdayName(dateStr) {
+  if (!dateStr) return '';
+  var d = new Date(dateStr + 'T00:00:00');
+  var names = ['星期日','星期一','星期二','星期三','星期四','星期五','星期六'];
+  return names[d.getDay()] || '';
+}
+
+function updateTimeSidebarDisplay() {
+  var dateEl = document.getElementById('time-display-date');
+  var weekdayEl = document.getElementById('time-display-weekday');
+  var pickerEl = document.getElementById('time-date-picker');
+  if (!state.globalTime.date) {
+    var today = new Date();
+    state.globalTime.date = today.getFullYear() + '-' +
+      String(today.getMonth() + 1).padStart(2, '0') + '-' +
+      String(today.getDate()).padStart(2, '0');
+  }
+  if (state.apiSettings.enableRealTime) {
+    var now = new Date();
+    var realDateStr = now.getFullYear() + '-' +
+      String(now.getMonth() + 1).padStart(2, '0') + '-' +
+      String(now.getDate()).padStart(2, '0');
+    var realFormatted = now.getFullYear() + '/' +
+      String(now.getMonth() + 1).padStart(2, '0') + '/' +
+      String(now.getDate()).padStart(2, '0');
+    dateEl.textContent = realFormatted + ' (实时)';
+    weekdayEl.textContent = getWeekdayName(realDateStr);
+    pickerEl.value = realDateStr;
+    pickerEl.disabled = true;
+  } else {
+    var formatted = getGlobalDateFormatted();
+    dateEl.textContent = formatted;
+    weekdayEl.textContent = getWeekdayName(state.globalTime.date);
+    pickerEl.value = state.globalTime.date;
+    pickerEl.disabled = false;
+  }
+  renderTimeLog();
+}
+
+function renderTimeLog() {
+  var listEl = document.getElementById('time-log-list');
+  var logs = state.globalTime.logs || [];
+  if (logs.length === 0) {
+    listEl.innerHTML = '<div class="time-log-empty">暂无变更记录</div>';
+    return;
+  }
+  var html = '';
+  var shown = logs.slice(-20).reverse();
+  for (var i = 0; i < shown.length; i++) {
+    var log = shown[i];
+    html += '<div class="time-log-item">';
+    html += '<span>' + escapeHtml(log.from.replace(/-/g, '/')) + '</span>';
+    html += '<span class="tl-arrow">→</span>';
+    html += '<span>' + escapeHtml(log.to.replace(/-/g, '/')) + '</span>';
+    if (log.reason) {
+      html += '<span class="tl-reason">' + escapeHtml(log.reason) + '</span>';
+    }
+    html += '</div>';
+  }
+  listEl.innerHTML = html;
+}
+
+function setGlobalDate(newDateStr, reason) {
+  var oldDate = state.globalTime.date || '';
+  if (oldDate === newDateStr) return;
+  state.globalTime.date = newDateStr;
+  if (oldDate) {
+    state.globalTime.logs.push({
+      from: oldDate,
+      to: newDateStr,
+      reason: reason || '手动设定',
+      timestamp: Date.now()
+    });
+    // 限制日志数量
+    if (state.globalTime.logs.length > 100) {
+      state.globalTime.logs = state.globalTime.logs.slice(-100);
+    }
+  }
+  updateTimeSidebarDisplay();
+  saveGlobalTime();
+}
+
+function addGlobalDays(days, reason) {
+  if (!state.globalTime.date) return;
+  var d = new Date(state.globalTime.date + 'T00:00:00');
+  d.setDate(d.getDate() + days);
+  var newStr = d.getFullYear() + '-' +
+    String(d.getMonth() + 1).padStart(2, '0') + '-' +
+    String(d.getDate()).padStart(2, '0');
+  setGlobalDate(newStr, reason || (days > 0 ? '+' + days + '天' : days + '天'));
+}
+
+async function saveGlobalTime() {
+  try {
+    await db.setSetting('global_time', state.globalTime);
+  } catch (_) {}
+}
+
+async function loadGlobalTime() {
+  try {
+    var saved = await db.getSetting('global_time');
+    if (saved && saved.date) {
+      state.globalTime.date = saved.date;
+      state.globalTime.logs = saved.logs || [];
+    }
+  } catch (_) {}
+  if (!state.globalTime.date) {
+    var today = new Date();
+    state.globalTime.date = today.getFullYear() + '-' +
+      String(today.getMonth() + 1).padStart(2, '0') + '-' +
+      String(today.getDate()).padStart(2, '0');
+  }
+  updateTimeSidebarDisplay();
+}
+
+function openTimeSidebar() {
+  document.getElementById('time-sidebar-panel').classList.add('open');
+  document.getElementById('time-sidebar-overlay').classList.add('open');
+  updateTimeSidebarDisplay();
+  var isRealTime = state.apiSettings.enableRealTime;
+  document.querySelectorAll('[data-time-add]').forEach(function(btn) {
+    btn.disabled = isRealTime;
+    btn.style.opacity = isRealTime ? '0.4' : '';
+    btn.style.pointerEvents = isRealTime ? 'none' : '';
+  });
+}
+
+function closeTimeSidebar() {
+  document.getElementById('time-sidebar-panel').classList.remove('open');
+  document.getElementById('time-sidebar-overlay').classList.remove('open');
+}
+
+// ── 对话中自动检测时间跳跃关键词 ──
+function detectTimeAdvance(text) {
+  if (!text) return null;
+  var patterns = [
+    { re: /(\d+)\s*天[后过之]/, unit: 1 },
+    { re: /(\d+)\s*日[后过之]/, unit: 1 },
+    { re: /(\d+)\s*夜[后过之]/, unit: 1 },
+    { re: /(\d+)\s*[个]?星期[后过之]/, unit: 7 },
+    { re: /(\d+)\s*[个]?周[后过之]/, unit: 7 },
+    { re: /(\d+)\s*[个]?月[后过之]/, unit: 30 },
+    { re: /(\d+)\s*[个]?年[后过之]/, unit: 365 },
+    { re: /过了(\d+)\s*天/, unit: 1 },
+    { re: /过了(\d+)\s*夜/, unit: 1 },
+    { re: /过了(\d+)\s*[个]?月/, unit: 30 },
+    { re: /过了(\d+)\s*[个]?星期/, unit: 7 },
+    { re: /过了(\d+)\s*[个]?周/, unit: 7 },
+    { re: /过了(\d+)\s*[个]?年/, unit: 365 },
+    { re: /第二天/, unit: 1, fixed: 1 },
+    { re: /次日/, unit: 1, fixed: 1 },
+    { re: /翌日/, unit: 1, fixed: 1 },
+    { re: /隔天/, unit: 1, fixed: 1 },
+    { re: /隔日/, unit: 1, fixed: 1 }
+  ];
+  for (var i = 0; i < patterns.length; i++) {
+    var p = patterns[i];
+    var match = text.match(p.re);
+    if (match) {
+      var num = p.fixed || parseInt(match[1]);
+      if (isNaN(num) || num <= 0 || num > 3650) continue;
+      var totalDays = num * p.unit;
+      var reason = match[0];
+      return { days: totalDays, reason: reason };
+    }
+  }
+  return null;
+}
+
+function checkAndAdvanceTime(msgText, role) {
+  var result = detectTimeAdvance(msgText);
+  if (!result) return;
+  addGlobalDays(result.days, (role === 'user' ? '用户' : '角色') + '：' + result.reason);
+  showToast('时间已自动推进 ' + result.days + ' 天', 'success', 3000);
+}
 // ── 设置面板列表排序（长按触发） ──
 (function initQpListSortEvents() {
   var listEl = document.getElementById('qp-list');
