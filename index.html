@@ -4459,7 +4459,6 @@ const state = {
     fontFamily: 'lxgw', fontSize: 15, lineHeight: 1.85,
     backgroundImage: '', bubbleShape: 'asymmetric',
     charBubbleColor: '', userBubbleColor: '',
-    charBubbleColor: '', userBubbleColor: '',
     colorTheme: '', frostedEnabled: false, bgBlur: 0
   },
   messages: [],
@@ -7189,6 +7188,9 @@ async function receiveReply() {
         // 没有任何内容，移除消息
         const idx = state.messages.indexOf(replyMsg);
         if (idx !== -1) state.messages.splice(idx, 1);
+        // 移除流式渲染的 DOM 元素
+        const orphanEl = document.querySelector('[data-msg-id="' + replyMsg.id + '"]');
+        if (orphanEl) orphanEl.remove();
       }
       showToast('已停止生成', 'warning');
     } else {
@@ -10660,9 +10662,12 @@ function buildApiRequestBody(format, model, messages, opts) {
     stream: opts.stream || false
   };
   if (opts.temperature !== undefined) body.temperature = opts.temperature;
-  // 仅当 penalty 非零时才传递，避免部分 Claude 系模型拒绝该参数
-  if (opts.frequencyPenalty !== undefined && opts.frequencyPenalty !== 0) body.frequency_penalty = opts.frequencyPenalty;
-  if (opts.presencePenalty !== undefined && opts.presencePenalty !== 0) body.presence_penalty = opts.presencePenalty;
+  // 仅 OpenAI 格式且非零时才传递 penalty 参数
+  // Anthropic 格式在上面已经 return 了，不会走到这里
+  if (format === 'openai') {
+    if (opts.frequencyPenalty !== undefined && opts.frequencyPenalty !== 0) body.frequency_penalty = opts.frequencyPenalty;
+    if (opts.presencePenalty !== undefined && opts.presencePenalty !== 0) body.presence_penalty = opts.presencePenalty;
+  }
   return body;
 }
 
