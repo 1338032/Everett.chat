@@ -3231,7 +3231,6 @@ a { color:inherit; text-decoration:none; }
       <input class="form-input" type="number" id="mednote-auto-turns" min="5" max="100" value="15" style="width:80px">
     </div>
     <div class="form-group">
-          <div class="form-group">
       <label class="form-label">笔记文风</label>
       <select class="form-input" id="mednote-style" style="width:100%;appearance:auto;-webkit-appearance:auto;padding:8px 12px">
         <option value="professional">专业严谨（偏学术，含诊断术语）</option>
@@ -6206,7 +6205,7 @@ function buildSystemPrompt() {
 
   let system = '';
 
-  // [1] Core Identity
+    // [1] Core Identity
   system += `You ARE ${charName}. The person talking to you is ${userName}.
 Core Rules:
 - Think, feel, and act entirely as ${charName}—you are not "playing a role"
